@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@300;400;500&family=Lora:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:#F9F8F5;--sf:#F0EEE8;--sf2:#E5E2D9;
+  --bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.16);
+  --t1:#17150E;--t2:rgba(23,21,14,.58);--t3:rgba(23,21,14,.34);
+  --ac:#C46A3C;--ac-bg:rgba(196,106,60,.09);
+  --go:#3A7059;--rd:#A04545;
+}
+.dark {
+  --bg:#181614;--sf:#222018;--sf2:#2C2925;
+  --bd:rgba(255,255,255,.09);--bd2:rgba(255,255,255,.18);
+  --t1:#E8E3DB;--t2:rgba(232,227,219,.58);--t3:rgba(232,227,219,.34);
+  --ac:#DF8A68;--ac-bg:rgba(223,138,104,.1);
+  --go:#5A9E80;--rd:#C06868;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',system-ui,sans-serif;transition:background .22s,color .22s;margin:0;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+
+/* ── Cards ── */
+.card{
+  background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+}
+.card:hover{border-color:var(--bd2);transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,0,0,.05)}
+.dark .card:hover{box-shadow:0 4px 18px rgba(0,0,0,.25)}
+
+/* ── Card staggered entrance ── */
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card-1{animation:cardIn .28s cubic-bezier(.4,0,.2,1) .04s both}
+.card-2{animation:cardIn .28s cubic-bezier(.4,0,.2,1) .08s both}
+.card-3{animation:cardIn .28s cubic-bezier(.4,0,.2,1) .12s both}
+.card-4{animation:cardIn .28s cubic-bezier(.4,0,.2,1) .16s both}
+.card-5{animation:cardIn .28s cubic-bezier(.4,0,.2,1) .20s both}
+.card-6{animation:cardIn .28s cubic-bezier(.4,0,.2,1) .24s both}
+
+/* ── Page fade ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Typography ── */
+.label-xs{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.stat-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;letter-spacing:-.02em;line-height:1;color:var(--t1)}
+
+/* ── Buttons ── */
+.btn-ghost{
+  padding:6px 12px;border-radius:7px;border:1px solid var(--bd2);
+  background:transparent;color:var(--t1);font-size:13px;
+  font-family:'DM Sans',sans-serif;cursor:pointer;
+  transition:background .14s,border-color .14s,transform .1s,box-shadow .14s;
+}
+.btn-ghost:hover{background:var(--sf2);border-color:var(--bd2)}
+.btn-ghost:active{transform:scale(.96);box-shadow:none}
+
+.btn-accent{
+  padding:6px 14px;border-radius:7px;border:1px solid var(--ac);
+  background:var(--ac);color:#fff;font-size:13px;
+  font-family:'DM Sans',sans-serif;cursor:pointer;
+  transition:opacity .14s,transform .1s,box-shadow .14s;
+  box-shadow:0 2px 8px rgba(196,106,60,.2);
+}
+.btn-accent:hover{opacity:.88;box-shadow:0 3px 12px rgba(196,106,60,.3)}
+.btn-accent:active{transform:scale(.96);box-shadow:none}
+
+.btn-sm{padding:4px 10px;font-size:12px}
+
+.btn-danger{
+  padding:4px 9px;border-radius:6px;border:1px solid rgba(160,69,69,.22);
+  background:transparent;color:var(--rd);font-size:12px;
+  font-family:'DM Sans',sans-serif;cursor:pointer;
+  transition:background .14s,transform .1s;
+}
+.btn-danger:hover{background:rgba(160,69,69,.08)}
+.btn-danger:active{transform:scale(.94)}
+
+/* ── Form ── */
+.input-field{
+  width:100%;border:1px solid var(--bd2);border-radius:7px;padding:7px 10px;
+  font-size:13px;background:var(--bg);color:var(--t1);outline:none;
+  font-family:'DM Sans',sans-serif;transition:border-color .16s,box-shadow .16s;
+}
+.input-field:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.dark .input-field{background:var(--sf2)}
+select.input-field{
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+
+/* ── Progress ── */
+.progress-track{height:5px;background:var(--sf2);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--ac);border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+
+/* ── Toggle ── */
+.toggle{
+  width:34px;height:19px;background:var(--sf2);border:1px solid var(--bd2);
+  border-radius:10px;cursor:pointer;position:relative;transition:background .2s;
+  flex-shrink:0;padding:0;
+}
+
+/* ── Row items ── */
+.row-item{
+  display:flex;align-items:center;gap:9px;padding:8px 0;
+  border-bottom:1px solid var(--bd);transition:background .14s;
+  border-radius:6px;margin:0 -4px;padding-left:4px;padding-right:4px;
+}
+.row-item:last-child{border-bottom:none}
+.row-item:hover{background:var(--sf2)}
+
+/* ── Dot ── */
+.dot-cat{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── Tip chip (investment calc toggle) ── */
+.tip-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:20px;
+  background:var(--ac-bg);border:1px solid rgba(196,106,60,.2);
+  color:var(--ac);font-size:11px;font-weight:600;cursor:pointer;
+  transition:all .16s;user-select:none;
+}
+.tip-chip:hover{background:rgba(196,106,60,.14)}
+.tip-chip:active{transform:scale(.96)}
+
+/* ── Tipo switch ── */
+.tipo-switch{display:flex;border:1px solid var(--bd2);border-radius:8px;overflow:hidden}
+.tipo-btn{
+  flex:1;padding:7px 10px;font-size:13px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .16s;
+  background:transparent;color:var(--t2);
+}
+.tipo-btn.active-in{background:#3A7059;color:#fff}
+.tipo-btn.active-out{background:#A04545;color:#fff}
+.dark .tipo-btn.active-in{background:#5A9E80}
+.dark .tipo-btn.active-out{background:#C06868}
+
+/* ── Divider ── */
+.divider{border:none;border-top:1px solid var(--bd);margin:10px 0}
+
+/* ── Sidebar nav highlight ── */
+.nav-link{
+  display:flex;align-items:center;gap:9px;padding:9px 18px;
+  font-size:13px;font-weight:500;text-decoration:none;
+  transition:all .18s;cursor:pointer;
+  border-left:2px solid transparent;
+  color:var(--t2);
+}
+.nav-link:hover{color:var(--t1);background:var(--ac-bg)}
+.nav-link.active{color:var(--ac);background:var(--ac-bg);border-left-color:var(--ac)}
+
+/* ── Suggestion cards ── */
+.suggestion{
+  margin-bottom:9px;padding:10px 12px;border-radius:8px;
+  border:1px solid transparent;
+  animation:slideDown .22s ease both;
+}

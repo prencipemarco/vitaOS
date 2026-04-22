@@ -1,0 +1,17 @@
+{
+  "name": "vitaOS — WorkLife Dashboard",
+  "short_name": "vitaOS",
+  "description": "Il tuo sistema operativo personale per vita, lavoro e studio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F9F8F5",
+  "theme_color": "#C46A3C",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "finance", "education"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "lang": "it"
+}
