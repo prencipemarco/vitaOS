@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useFirme } from '../hooks/useFirme'
 import { useImpostazioni } from '../hooks/useImpostazioni'
-import { PageHeader, StatCard, Grid, SectionHeader, InputRow, MonthNav, EmptyState, showError, showSuccess, showConfirm } from '../components/ui'
-import { formatCurrency, formatDate, MESI } from '../utils/dateHelpers'
+import { PageHeader, Grid, SectionHeader, InputRow, MonthNav, EmptyState, showError, showSuccess, showConfirm } from '../components/ui'
+import { formatCurrency, formatDate } from '../utils/dateHelpers'
 
 const Tip = ({ active, payload, label }) => !active||!payload?.length?null:(
   <div style={{ background:'var(--sf)',border:'1px solid var(--bd2)',borderRadius:8,padding:'8px 12px',fontSize:12 }}>
@@ -12,84 +12,78 @@ const Tip = ({ active, payload, label }) => !active||!payload?.length?null:(
   </div>
 )
 
+const GIORNI_ITA = ['dom','lun','mar','mer','gio','ven','sab']
+
 export default function FoglioDiFirme() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
-
   const { firme, addFirma, removeFirma, calcOre, totaleOre, hasDuplicate } = useFirme()
   const { settings, tariffaCalcolata, oreContrattualiMensili, getOrarioGiorno } = useImpostazioni()
 
-  // Dynamic defaults from config based on selected date
   const todayStr = now.toISOString().slice(0, 10)
-  const [selDate, setSelDate] = useState(todayStr)
+  const [form, setForm] = useState({ data: todayStr, entrata: '', uscita: '' })
 
-  // Get schedule for selected date
-  const selDow = new Date(selDate + 'T12:00').getDay()
-  const selOrario = getOrarioGiorno(selDow)
-
-  const [form, setForm] = useState({
-    data: todayStr,
-    entrata: selOrario?.dalle || '09:00',
-    uscita: selOrario?.alle || '18:00',
-    pausa: '0',
-  })
-
-  // Update form defaults when date changes
+  // Auto-fill from schedule when date changes
   useEffect(() => {
     const dow = new Date(form.data + 'T12:00').getDay()
     const orario = getOrarioGiorno(dow)
-    if (orario?.abilitato) {
-      setForm(f => ({
-        ...f,
-        entrata: orario.dalle || f.entrata,
-        uscita: orario.alle || f.uscita,
-        pausa: String(orario.pausa || 0),
-      }))
+    if (orario?.abilitato && orario.dalle && orario.alle) {
+      setForm(f => ({ ...f, entrata: orario.dalle, uscita: orario.alle }))
+    } else {
+      setForm(f => ({ ...f, entrata: '', uscita: '' }))
     }
   }, [form.data])
 
   const monthFirme = firme.filter(f => {
     const d = new Date(f.data + 'T12:00')
     return d.getFullYear() === year && d.getMonth() === month
-  }).sort((a, b) => b.data.localeCompare(a.data))
+  }).sort((a,b) => b.data.localeCompare(a.data))
 
   const ore = totaleOre(year, month)
   const target = oreContrattualiMensili() || 0
   const rate = tariffaCalcolata()
   const stima = rate > 0 ? Math.round(ore * rate) : 0
-  const pct = target > 0 ? Math.min(100, Math.round(ore / target * 100)) : 0
+  const pct = target > 0 ? Math.min(100, Math.round(ore/target*100)) : 0
 
   const chartData = (() => {
     const weeks = {}
     monthFirme.forEach(f => {
-      const d = new Date(f.data + 'T12:00')
-      const w = `Sett.${Math.ceil(d.getDate() / 7)}`
-      weeks[w] = (weeks[w] || 0) + calcOre(f)
+      const d = new Date(f.data+'T12:00')
+      const w = `Sett.${Math.ceil(d.getDate()/7)}`
+      weeks[w] = (weeks[w]||0) + calcOre(f)
     })
-    return Object.entries(weeks).map(([name, ore]) => ({ name, ore: Math.round(ore * 10) / 10 }))
+    return Object.entries(weeks).map(([name,ore]) => ({ name, ore: Math.round(ore*10)/10 }))
   })()
+
+  const previewOre = (() => {
+    if (!form.entrata || !form.uscita) return 0
+    const [hi,mi] = form.entrata.split(':').map(Number)
+    const [ho,mo] = form.uscita.split(':').map(Number)
+    return Math.max(0, ((ho*60+mo) - (hi*60+mi)) / 60)
+  })()
+
+  const selectedDow = new Date(form.data+'T12:00').getDay()
+  const selectedOrario = getOrarioGiorno(selectedDow)
+  const scheduleLabel = selectedOrario?.abilitato && selectedOrario.dalle
+    ? `Orario configurato: ${selectedOrario.dalle} – ${selectedOrario.alle}`
+    : 'Nessun orario configurato per questo giorno'
 
   const handleAdd = () => {
     if (hasDuplicate(form.data)) {
-      showError(`Giornata già registrata per il ${new Date(form.data + 'T12:00').toLocaleDateString('it-IT', { day:'numeric', month:'long' })}`)
+      showError(`Giornata già registrata per il ${new Date(form.data+'T12:00').toLocaleDateString('it-IT',{day:'numeric',month:'long'})}`)
       return
     }
+    if (!form.entrata || !form.uscita) { showError('Inserisci orario entrata e uscita'); return }
     const result = addFirma(form)
     if (result?.error) { showError(result.error); return }
     showSuccess('Giornata registrata.')
   }
 
-  const handleRemove = (f) => {
-    showConfirm(`Rimuovere la giornata del ${formatDate(f.data)}?`, () => removeFirma(f.id))
-  }
-
-  const previewOre = (() => {
-    const [hi, mi] = form.entrata.split(':').map(Number)
-    const [ho, mo] = form.uscita.split(':').map(Number)
-    const net = (ho * 60 + mo) - (hi * 60 + mi) - Number(form.pausa)
-    return Math.max(0, net / 60)
-  })()
+  const handleRemove = (f) => showConfirm(
+    `Rimuovere la giornata del ${formatDate(f.data)}?`,
+    () => removeFirma(f.id)
+  )
 
   return (
     <div style={{ padding:28, animation:'fadeUp .24s ease both' }}>
@@ -98,16 +92,24 @@ export default function FoglioDiFirme() {
         <MonthNav year={year} month={month} onChange={(y,m)=>{ setYear(y); setMonth(m) }} />
       </div>
 
-      <Grid cols={4} gap={10} style={{ marginBottom:12 }}>
-        <div className="card card-1"><div className="label-xs" style={{ marginBottom:7 }}>ORE LAVORATE</div><div className="stat-val" style={{ color:'var(--ac)' }}>{ore>0?`${ore}h`:'—'}</div><div style={{ fontSize:11,color:'var(--t3)',marginTop:5,fontFamily:"'DM Mono',monospace" }}>{target>0?`target ${target}h`:'configura orario'}</div></div>
-        <div className="card card-2"><div className="label-xs" style={{ marginBottom:7 }}>AVANZAMENTO</div><div className="stat-val">{target>0?`${pct}%`:'—'}</div><div style={{ fontSize:11,color:'var(--t3)',marginTop:5,fontFamily:"'DM Mono',monospace" }}>{target>0?`${Math.max(0,target-ore).toFixed(1)}h mancanti`:'—'}</div></div>
-        <div className="card card-3"><div className="label-xs" style={{ marginBottom:7 }}>GIORNI REGISTRATI</div><div className="stat-val">{monthFirme.length||'—'}</div><div style={{ fontSize:11,color:'var(--t3)',marginTop:5,fontFamily:"'DM Mono',monospace" }}>questo mese</div></div>
-        <div className="card card-4"><div className="label-xs" style={{ marginBottom:7 }}>STIMA STIPENDIO</div><div className="stat-val">{stima>0?formatCurrency(stima):'—'}</div><div style={{ fontSize:11,color:'var(--t3)',marginTop:5,fontFamily:"'DM Mono',monospace" }}>{rate>0?`a ${formatCurrency(rate)}/h`:'imposta tariffa'}</div></div>
-      </Grid>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
+        {[
+          ['ORE LAVORATE', ore>0?`${ore}h`:'—', 'var(--ac)', target>0?`target ${target}h`:'configura orario'],
+          ['AVANZAMENTO', target>0?`${pct}%`:'—', undefined, target>0?`${Math.max(0,target-ore).toFixed(1)}h mancanti`:'—'],
+          ['GIORNI REGISTRATI', monthFirme.length||'—', undefined, 'questo mese'],
+          ['STIMA STIPENDIO', stima>0?formatCurrency(stima):'—', undefined, rate>0?`${formatCurrency(rate)}/h`:'imposta tariffa'],
+        ].map(([l,v,c,s],i) => (
+          <div key={l} className={`card card-${i+1}`}>
+            <div className="label-xs" style={{ marginBottom:7 }}>{l}</div>
+            <div className="stat-val" style={c?{color:c}:{}}>{v}</div>
+            <div style={{ fontSize:11,color:'var(--t3)',marginTop:5,fontFamily:"'DM Mono',monospace" }}>{s}</div>
+          </div>
+        ))}
+      </div>
 
       {target > 0 && (
         <div className="card" style={{ marginBottom:12 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:7 }}>
             <span className="label-xs">progressione mensile</span>
             <span style={{ fontSize:11,fontFamily:"'DM Mono',monospace",color:'var(--ac)' }}>{ore}h / {target}h</span>
           </div>
@@ -117,7 +119,7 @@ export default function FoglioDiFirme() {
         </div>
       )}
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 300px', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 290px', gap:12 }}>
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           {chartData.length > 0 && (
             <div className="card">
@@ -133,7 +135,6 @@ export default function FoglioDiFirme() {
               </ResponsiveContainer>
             </div>
           )}
-
           <div className="card">
             <div className="label-xs" style={{ marginBottom:12 }}>registro presenze</div>
             {monthFirme.length === 0
@@ -144,7 +145,6 @@ export default function FoglioDiFirme() {
                     <div style={{ fontSize:13, fontWeight:500 }}>{formatDate(f.data)}</div>
                     <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace" }}>
                       {f.entrata} → {f.uscita}
-                      {f.pausa > 0 ? ` · pausa ${f.pausa}min` : ' · nessuna pausa'}
                     </div>
                   </div>
                   <span style={{ fontSize:14,fontFamily:"'DM Mono',monospace",color:'var(--ac)',fontWeight:600,marginRight:8 }}>
@@ -165,12 +165,19 @@ export default function FoglioDiFirme() {
               <div style={{ fontSize:11,color:'var(--t3)',marginBottom:4 }}>Data</div>
               <input className="input-field" type="date" value={form.data}
                 onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
+              {/* Day label + schedule hint */}
+              <div style={{ fontSize:11,color:'var(--t3)',marginTop:5,display:'flex',alignItems:'center',gap:6 }}>
+                <span style={{ fontWeight:600,color:'var(--t2)' }}>{GIORNI_ITA[new Date(form.data+'T12:00').getDay()].toUpperCase()}</span>
+                <span>·</span>
+                <span style={{ color: selectedOrario?.abilitato?'var(--ac)':'var(--t3)' }}>{scheduleLabel}</span>
+              </div>
               {hasDuplicate(form.data) && (
                 <div style={{ fontSize:11,color:'var(--rd)',marginTop:4,padding:'4px 8px',background:'rgba(160,69,69,.07)',borderRadius:6 }}>
                   ⚠ Giornata già registrata
                 </div>
               )}
             </div>
+
             <InputRow>
               <div>
                 <div style={{ fontSize:11,color:'var(--t3)',marginBottom:4 }}>Entrata</div>
@@ -183,20 +190,10 @@ export default function FoglioDiFirme() {
                   onChange={e => setForm(f => ({ ...f, uscita: e.target.value }))} />
               </div>
             </InputRow>
-            <div>
-              <div style={{ fontSize:11,color:'var(--t3)',marginBottom:4 }}>Pausa pranzo</div>
-              <select className="input-field" value={form.pausa}
-                onChange={e => setForm(f => ({ ...f, pausa: e.target.value }))}>
-                <option value="0">Nessuna pausa</option>
-                <option value="30">30 minuti</option>
-                <option value="60">60 minuti</option>
-                <option value="90">90 minuti</option>
-              </select>
-            </div>
 
             {previewOre > 0 && (
-              <div style={{ padding:'10px 12px',background:'var(--ac-bg)',borderRadius:8,transition:'all .2s' }}>
-                <div style={{ fontSize:11,color:'var(--t2)' }}>Ore nette calcolate</div>
+              <div style={{ padding:'10px 12px',background:'var(--ac-bg)',borderRadius:8 }}>
+                <div style={{ fontSize:11,color:'var(--t2)' }}>Ore calcolate</div>
                 <div style={{ fontSize:22,fontFamily:"'DM Mono',monospace",color:'var(--ac)',fontWeight:600,marginTop:2 }}>
                   {previewOre.toFixed(2)}h
                 </div>
@@ -207,7 +204,6 @@ export default function FoglioDiFirme() {
                 )}
               </div>
             )}
-
             <button className="btn-accent" onClick={handleAdd} style={{ marginTop:4 }}>
               Registra giornata
             </button>

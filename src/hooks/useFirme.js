@@ -1,6 +1,6 @@
 import { useLocalStorage } from './useLocalStorage'
 
-function timeToMinutes(t) {
+function timeToMin(t) {
   if (!t) return 0
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -9,24 +9,24 @@ function timeToMinutes(t) {
 export function useFirme() {
   const [firme, setFirme] = useLocalStorage('wl_firme', [])
 
-  // Check for duplicate date
   const hasDuplicate = (data) => firme.some(f => f.data === data)
 
   const addFirma = (firma) => {
     if (!firma.data || !firma.entrata || !firma.uscita) return { error: 'Campi mancanti' }
     if (hasDuplicate(firma.data)) return { error: 'Giornata già registrata per questa data' }
-    const inM = timeToMinutes(firma.entrata)
-    const outM = timeToMinutes(firma.uscita)
+    const inM = timeToMin(firma.entrata)
+    const outM = timeToMin(firma.uscita)
     if (outM <= inM) return { error: 'Orario uscita deve essere dopo entrata' }
     const id = Date.now()
-    setFirme(prev => [...prev, { ...firma, id, pausa: Number(firma.pausa) || 0 }])
+    // No pausa field anymore
+    setFirme(prev => [...prev, { data: firma.data, entrata: firma.entrata, uscita: firma.uscita, id }])
     return { success: true, id }
   }
 
   const removeFirma = (id) => setFirme(prev => prev.filter(f => f.id !== id))
 
   const calcOre = (firma) => {
-    const net = timeToMinutes(firma.uscita) - timeToMinutes(firma.entrata) - (firma.pausa || 0)
+    const net = timeToMin(firma.uscita) - timeToMin(firma.entrata)
     return Math.max(0, Math.round((net / 60) * 100) / 100)
   }
 

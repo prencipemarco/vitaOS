@@ -1,6 +1,6 @@
 // vitaOS Service Worker — offline-first strategy
-const CACHE_NAME = 'vitaos-v5'
-const STATIC_CACHE = 'vitaos-static-v5'
+const CACHE_NAME = 'vitaos-v6'
+const STATIC_CACHE = 'vitaos-static-v6'
 
 // On install: cache nothing (assets are content-hashed, handled by Vite)
 self.addEventListener('install', () => self.skipWaiting())
