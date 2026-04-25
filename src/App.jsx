@@ -11,9 +11,17 @@ const Finanze       = lazy(() => import('./pages/Finanze'))
 const Risparmi      = lazy(() => import('./pages/Risparmi'))
 const Impostazioni  = lazy(() => import('./pages/Impostazioni'))
 const Studio        = lazy(() => import('./pages/Studio'))
+const Salute        = lazy(() => import('./pages/Salute'))
 
 function Loader() {
-  return <div style={{ display:'flex',alignItems:'center',justifyContent:'center',height:'60vh',color:'var(--t3)',fontFamily:"'DM Mono',monospace",fontSize:13 }}>caricamento...</div>
+  return (
+    <div style={{
+      display:'flex',alignItems:'center',justifyContent:'center',
+      height:'60vh',color:'var(--t3)',fontFamily:"'DM Mono',monospace",fontSize:13
+    }}>
+      caricamento...
+    </div>
+  )
 }
 
 function AppInner() {
@@ -21,6 +29,7 @@ function AppInner() {
   const theme = settings.theme || 'light'
   useEffect(() => { document.documentElement.classList.toggle('dark', theme==='dark') }, [theme])
   const toggleTheme = () => update('theme', theme==='light'?'dark':'light')
+
   return (
     <div style={{ minHeight:'100vh' }}>
       <Sidebar theme={theme} onToggleTheme={toggleTheme} userName={settings.name} />
@@ -33,6 +42,7 @@ function AppInner() {
             <Route path="/finanze"       element={<Finanze />} />
             <Route path="/risparmi"      element={<Risparmi />} />
             <Route path="/studio"        element={<Studio />} />
+            <Route path="/salute"        element={<Salute />} />
             <Route path="/impostazioni"  element={<Impostazioni />} />
           </Routes>
         </Suspense>

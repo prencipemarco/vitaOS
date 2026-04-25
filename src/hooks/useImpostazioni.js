@@ -7,6 +7,14 @@ export const DEFAULT_STUDIO_GIORNO = {
   pomeriggio: { abilitato: false, dalle: '20:00', alle: '22:00' },
 }
 
+export const DEFAULT_PALESTRA_GIORNO = {
+  abilitato: false,
+  dalle: '18:30',
+  alle: '20:00',
+  sede: '',
+  bufferMinuti: 30,
+}
+
 export const DEFAULT_SETTINGS = {
   name: '',
   tipoContratto: 'dipendente',
@@ -21,15 +29,23 @@ export const DEFAULT_SETTINGS = {
     6: { abilitato: false, dalle: '',      alle: ''      },
     0: { abilitato: false, dalle: '',      alle: ''      },
   },
-  // Each day: two independent slots (mattina + pomeriggio)
   scheduleStudio: {
-    1: { ...DEFAULT_STUDIO_GIORNO, abilitato: true,  mattina: { abilitato: false, dalle: '07:00', alle: '09:00' }, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
-    2: { ...DEFAULT_STUDIO_GIORNO, abilitato: true,  mattina: { abilitato: false, dalle: '07:00', alle: '09:00' }, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
-    3: { ...DEFAULT_STUDIO_GIORNO, abilitato: true,  mattina: { abilitato: false, dalle: '07:00', alle: '09:00' }, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
-    4: { ...DEFAULT_STUDIO_GIORNO, abilitato: true,  mattina: { abilitato: false, dalle: '07:00', alle: '09:00' }, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
-    5: { ...DEFAULT_STUDIO_GIORNO, abilitato: true,  mattina: { abilitato: false, dalle: '07:00', alle: '09:00' }, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
+    1: { ...DEFAULT_STUDIO_GIORNO, abilitato: true, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
+    2: { ...DEFAULT_STUDIO_GIORNO, abilitato: true, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
+    3: { ...DEFAULT_STUDIO_GIORNO, abilitato: true, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
+    4: { ...DEFAULT_STUDIO_GIORNO, abilitato: true, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
+    5: { ...DEFAULT_STUDIO_GIORNO, abilitato: true, pomeriggio: { abilitato: true, dalle: '20:00', alle: '22:00' } },
     6: { ...DEFAULT_STUDIO_GIORNO },
     0: { ...DEFAULT_STUDIO_GIORNO },
+  },
+  schedulePalestra: {
+    1: { ...DEFAULT_PALESTRA_GIORNO },
+    2: { ...DEFAULT_PALESTRA_GIORNO },
+    3: { ...DEFAULT_PALESTRA_GIORNO },
+    4: { ...DEFAULT_PALESTRA_GIORNO },
+    5: { ...DEFAULT_PALESTRA_GIORNO },
+    6: { ...DEFAULT_PALESTRA_GIORNO },
+    0: { ...DEFAULT_PALESTRA_GIORNO },
   },
   tredicesima: false,
   quattordicesima: false,
@@ -48,12 +64,26 @@ function timeToMin(t) {
   return h * 60 + m
 }
 
+function addMinToTime(t, min) {
+  const total = timeToMin(t) + min
+  const h = Math.floor(total / 60) % 24
+  const m = total % 60
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+}
+
+function subMinFromTime(t, min) {
+  const total = Math.max(0, timeToMin(t) - min)
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+}
+
 export function useImpostazioni() {
   const [settings, setSettings] = useLocalStorage('wl_settings', DEFAULT_SETTINGS)
 
   const update = (key, val) => setSettings(s => ({ ...s, [key]: val }))
 
-  // Work schedule: no pause
+  // ── Work schedule ──────────────────────────────────────────
   const updateScheduleGiorno = (dow, patch) =>
     setSettings(s => ({
       ...s,
@@ -63,7 +93,7 @@ export function useImpostazioni() {
       }
     }))
 
-  // Study schedule: per-day dual slot
+  // ── Study schedule ─────────────────────────────────────────
   const updateStudioGiorno = (dow, patch) =>
     setSettings(s => ({
       ...s,
@@ -85,22 +115,46 @@ export function useImpostazioni() {
       }
     })
 
+  // ── Gym schedule ───────────────────────────────────────────
+  const updatePalestraGiorno = (dow, patch) =>
+    setSettings(s => ({
+      ...s,
+      schedulePalestra: {
+        ...(s.schedulePalestra || {}),
+        [dow]: { ...(DEFAULT_PALESTRA_GIORNO), ...(s.schedulePalestra?.[dow] || {}), ...patch }
+      }
+    }))
+
+  const getSchedulePalestra = () => settings.schedulePalestra || DEFAULT_SETTINGS.schedulePalestra
+
+  // Returns the full block including travel buffers for calendar display
+  const getPalestraBlockGiorno = (dow) => {
+    const g = (settings.schedulePalestra || {})[dow] || { ...DEFAULT_PALESTRA_GIORNO }
+    if (!g.abilitato || !g.dalle || !g.alle) return null
+    const buf = parseInt(g.bufferMinuti) || 30
+    return {
+      ...g,
+      dalleConBuffer: subMinFromTime(g.dalle, buf),
+      alleConBuffer: addMinToTime(g.alle, buf),
+    }
+  }
+
   const getSchedule = () => settings.scheduleLavorativo || DEFAULT_SETTINGS.scheduleLavorativo
   const getScheduleStudio = () => settings.scheduleStudio || DEFAULT_SETTINGS.scheduleStudio
 
   const getOrarioGiorno = (dow) => (settings.scheduleLavorativo || {})[dow] || { abilitato: false }
   const getOrarioStudio = (dow) => (settings.scheduleStudio || {})[dow] || { ...DEFAULT_STUDIO_GIORNO }
+  const getOrarioPalestra = (dow) => (settings.schedulePalestra || {})[dow] || { ...DEFAULT_PALESTRA_GIORNO }
 
-  // Total minutes of study per day (sum of enabled slots)
+  // ── Computed ───────────────────────────────────────────────
   const minutiStudioGiorno = (dow) => {
     const g = getOrarioStudio(dow)
     if (!g.abilitato) return 0
     let min = 0
     ;['mattina', 'pomeriggio'].forEach(f => {
       const slot = g[f]
-      if (slot?.abilitato && slot.dalle && slot.alle) {
+      if (slot?.abilitato && slot.dalle && slot.alle)
         min += Math.max(0, timeToMin(slot.alle) - timeToMin(slot.dalle))
-      }
     })
     return min
   }
@@ -139,12 +193,24 @@ export function useImpostazioni() {
     return Math.round((base * 12 + bonus) / 12)
   }
 
+  const orePalestraSettimanali = () => {
+    const sch = getSchedulePalestra()
+    let ore = 0
+    Object.values(sch).forEach(g => {
+      if (!g.abilitato || !g.dalle || !g.alle) return
+      ore += Math.max(0, (timeToMin(g.alle) - timeToMin(g.dalle)) / 60)
+    })
+    return Math.round(ore * 10) / 10
+  }
+
   return {
     settings, update,
-    updateScheduleGiorno, updateStudioGiorno, updateStudioSlot,
-    getSchedule, getScheduleStudio, getOrarioGiorno, getOrarioStudio,
+    updateScheduleGiorno, updateStudioGiorno, updateStudioSlot, updatePalestraGiorno,
+    getSchedule, getScheduleStudio, getSchedulePalestra,
+    getOrarioGiorno, getOrarioStudio, getOrarioPalestra, getPalestraBlockGiorno,
     minutiStudioGiorno, oreStudioSettimanali,
     oreContrattualiMensili, tariffaCalcolata,
     stipendioMensileNetto, reddtitoMedioMensile,
+    orePalestraSettimanali,
   }
 }

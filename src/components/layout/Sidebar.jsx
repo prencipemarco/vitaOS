@@ -6,6 +6,7 @@ const Svg = ({ d, size=14 }) => (
     <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
+
 const ICONS = {
   overview: "M1.5 1.5h4v4h-4zM8.5 1.5h4v4h-4zM1.5 8.5h4v4h-4zM8.5 8.5h4v4h-4z",
   calendar: "M1 4.5h12M4 1v2.5M10 1v2.5M2.5 2h9A1.5 1.5 0 0113 3.5v8A1.5 1.5 0 0111.5 13h-9A1.5 1.5 0 011 11.5v-8A1.5 1.5 0 012.5 2z",
@@ -13,6 +14,7 @@ const ICONS = {
   wallet:   "M1.5 3.5h11A.5.5 0 0113 4v7.5A1.5 1.5 0 0111.5 13h-9A1.5 1.5 0 011 11.5V4a.5.5 0 01.5-.5zM1 7h12M10 10h.5",
   savings:  "M7 1a6 6 0 100 12A6 6 0 007 1zM7 3.5v.5M7 10v.5M9.5 5.5C9.5 4.4 8.4 4 7 4S4.5 4.7 4.5 5.5 5.6 7 7 7s2.5.7 2.5 1.5S8.4 10 7 10s-2.5-.7-2.5-1.5",
   study:    "M1 3l6-2 6 2v5c0 2.5-2.5 4.5-6 5-3.5-.5-6-2.5-6-5V3zM7 6v3M5.5 7.5h3",
+  health:   "M7 12.5S1.5 9 1.5 5a2.5 2.5 0 015-0c.3-.7 1-1.2 1.5-1.2.5 0 1.2.5 1.5 1.2a2.5 2.5 0 015 0c0 4-5.5 7.5-5.5 7.5z",
   settings: "M7 5a2 2 0 100 4 2 2 0 000-4zM7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.6 2.6l1 1M10.4 10.4l1 1M11.4 2.6l-1 1M3.6 10.4l-1 1",
 }
 
@@ -23,6 +25,7 @@ const NAV = [
   { to:'/finanze',      label:'Finanze',       icon:'wallet'         },
   { to:'/risparmi',     label:'Risparmi',      icon:'savings'        },
   { to:'/studio',       label:'Studio',        icon:'study'          },
+  { to:'/salute',       label:'Salute',        icon:'health'         },
 ]
 
 export default function Sidebar({ theme, onToggleTheme, userName }) {

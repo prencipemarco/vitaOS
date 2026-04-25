@@ -3,9 +3,13 @@ import { useCalendario, TIPI_EVENTO } from '../hooks/useCalendario'
 import { useRisparmi } from '../hooks/useRisparmi'
 import { useImpostazioni } from '../hooks/useImpostazioni'
 import { useStudio } from '../hooks/useStudio'
+import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
 import { getFestivita, getPonti, isFestivita, getFestivitaNome } from '../utils/festivita'
 import { buildCalendarGrid, MESI, GIORNI_BREVI, todayStr, formatShort } from '../utils/dateHelpers'
 import { PageHeader, SectionHeader, FormPanel, InputRow, Badge, EmptyState, showConfirm } from '../components/ui'
+
+const STUDIO_COLOR = '#7A5FA0'
+const GYM_COLOR    = '#3A7059'
 
 function MonthNavInline({ year, month, onChange }) {
   const prev = () => month === 0 ? onChange(year-1, 11) : onChange(year, month-1)
@@ -18,9 +22,6 @@ function MonthNavInline({ year, month, onChange }) {
   )
 }
 
-// Color for study chips (purple family)
-const STUDIO_COLOR = '#7A5FA0'
-
 export default function Calendario() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -32,8 +33,9 @@ export default function Calendario() {
 
   const { events, addEvent, removeEvent, eventsForDate, eventsForMonth, countFerie, countPermessi } = useCalendario()
   const { goals } = useRisparmi()
-  const { getOrarioGiorno, getOrarioStudio } = useImpostazioni()
+  const { getOrarioGiorno, getOrarioStudio, getPalestraBlockGiorno } = useImpostazioni()
   const { corsi, getTasksForCorso } = useStudio()
+  const { scheda: schedaSalute, sessioni: sessioniSalute } = useSalute()
 
   const festivita = getFestivita(year)
   const ponti = getPonti(year)
@@ -51,12 +53,11 @@ export default function Calendario() {
   const monthEvents = eventsForMonth(year, month)
   const toDateStr = d => `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
 
-  // Goal deadlines shown as events
   const goalDeadlines = goals.filter(g => g.scadenza).map(g => ({
     id:`goal-${g.id}`, data:g.scadenza, titolo:`📅 ${g.nome}`, tipo:'scadenza', ora:''
   }))
 
-  // Get study tasks for a specific date (from all courses)
+  // Study tasks for a date
   const getStudyTasksForDate = (ds) => {
     const result = []
     corsi.forEach(corso => {
@@ -65,8 +66,38 @@ export default function Calendario() {
         result.push({ ...t, corsoNome: corso.nome, corsoId: corso.id })
       })
     })
-    // Sort by oraPianificata
     return result.sort((a,b) => (a.oraPianificata||'').localeCompare(b.oraPianificata||''))
+  }
+
+  // Check if gym session was completed on a date
+  const getGymSessionForDate = (ds) => {
+    return sessioniSalute.find(s => s.data === ds && s.completata) || null
+  }
+
+  // Build gym chip for a date (from schedule, not from actual sessions)
+  const getGymChipForDate = (ds) => {
+    const d = new Date(ds + 'T12:00')
+    const dow = d.getDay()
+    const block = getPalestraBlockGiorno(dow)
+    const giornoScheda = schedaSalute[dow]
+    if (!block) return null
+    const isRest = giornoScheda?.tipo === 'riposo' || giornoScheda?.tipo === 'riposo_attivo'
+    if (isRest) return null
+    const completed = getGymSessionForDate(ds)
+    return {
+      id: `gym-${ds}`,
+      data: ds,
+      titolo: giornoScheda?.nome || 'Allenamento',
+      tipo: 'palestra',
+      ora: block.dalle,
+      dalleConBuffer: block.dalleConBuffer,
+      alleConBuffer: block.alleConBuffer,
+      alle: block.alle,
+      sede: block.sede,
+      tipoAllenamento: giornoScheda?.tipo || 'custom',
+      completed: !!completed,
+      color: GYM_COLOR,
+    }
   }
 
   const allCellItems = (d) => {
@@ -75,13 +106,15 @@ export default function Calendario() {
     const ev = monthEvents.filter(e => e.data === ds)
     const gd = goalDeadlines.filter(g => g.data === ds)
     const st = getStudyTasksForDate(ds)
-    return [...ev, ...gd, ...st]
+    const gym = getGymChipForDate(ds)
+    return [...ev, ...gd, ...st, ...(gym ? [gym] : [])]
   }
 
   const selectedEvents = selected ? eventsForDate(selected) : []
   const selectedGoals = goalDeadlines.filter(g => g.data === selected)
   const selectedStudy = selected ? getStudyTasksForDate(selected) : []
-  const allSelected = [...selectedEvents, ...selectedGoals, ...selectedStudy]
+  const selectedGym = selected ? getGymChipForDate(selected) : null
+  const allSelected = [...selectedEvents, ...selectedGoals, ...selectedStudy, ...(selectedGym ? [selectedGym] : [])]
 
   const handleAdd = () => {
     if (!form.titolo.trim() || !form.data) return
@@ -90,9 +123,7 @@ export default function Calendario() {
     setFormOpen(false)
   }
 
-  const handleRemove = (id) => {
-    showConfirm('Rimuovere questo evento?', () => removeEvent(id))
-  }
+  const handleRemove = (id) => showConfirm('Rimuovere questo evento?', () => removeEvent(id))
 
   const handleCellClick = d => {
     if (!d) return
@@ -102,36 +133,34 @@ export default function Calendario() {
   }
 
   const isFest = d => d && isFestivita(toDateStr(d), year)
-  const isPonte = d => d && ponti.some(p => p.data === toDateStr(d))
   const festNome = d => d ? getFestivitaNome(toDateStr(d), year) : null
 
-  // Work + study hours for a date
   const getLabelsForDate = (d) => {
     if (!d) return []
     const ds = toDateStr(d)
     const dow = new Date(ds+'T12:00').getDay()
     const labels = []
-
     const workorario = getOrarioGiorno(dow)
-    if (workorario?.abilitato && workorario.dalle && !isFestivita(ds, year)) {
+    if (workorario?.abilitato && workorario.dalle && !isFestivita(ds, year))
       labels.push({ text:`${workorario.dalle}–${workorario.alle}`, color:'#3A5F8A', prefix:'Lavoro' })
-    }
-
     const studioG = getOrarioStudio(dow)
     if (studioG?.abilitato) {
       ;['mattina','pomeriggio'].forEach(f => {
         const slot = studioG[f]
-        if (slot?.abilitato && slot.dalle) {
+        if (slot?.abilitato && slot.dalle)
           labels.push({ text:`${slot.dalle}–${slot.alle}`, color:STUDIO_COLOR, prefix:'Studio' })
-        }
       })
     }
+    const gymBlock = getPalestraBlockGiorno(dow)
+    const giornoScheda = schedaSalute[dow]
+    const isGymRest = giornoScheda?.tipo === 'riposo' || giornoScheda?.tipo === 'riposo_attivo'
+    if (gymBlock && !isGymRest)
+      labels.push({ text:`${gymBlock.dalleConBuffer}–${gymBlock.alleConBuffer}`, color:GYM_COLOR, prefix:'🏋️' })
     return labels
   }
 
   return (
     <div style={{ padding:'20px 28px', animation:'fadeUp .24s ease both' }}>
-      {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div>
@@ -173,7 +202,6 @@ export default function Calendario() {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 248px', gap:14, alignItems:'start' }}>
         {/* ── Calendar grid ── */}
         <div className="card card-1" style={{ padding:0, overflow:'hidden' }}>
-          {/* Day headers */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', background:'var(--sf2)', borderBottom:'1px solid var(--bd)' }}>
             {GIORNI_BREVI.map((g,i) => (
               <div key={i} style={{ textAlign:'center', fontSize:10, fontWeight:700, letterSpacing:'.1em', color:'var(--t3)', padding:'9px 0' }}>{g}</div>
@@ -193,21 +221,18 @@ export default function Calendario() {
               return (
                 <div key={i} onClick={() => handleCellClick(d)}
                   style={{
-                    minHeight: 150, // taller cells
-                    padding:'5px 4px 4px',
+                    minHeight:150, padding:'5px 4px 4px',
                     borderRight:(i%7)<6?'1px solid var(--bd)':'none',
                     borderBottom:'1px solid var(--bd)',
                     cursor:d?'pointer':'default',
                     background: isSel?'var(--ac-bg)':fest?'rgba(232,184,75,.06)':isToday?'var(--sf2)':isWeekend&&d?'rgba(0,0,0,.01)':'transparent',
                     transition:'background .12s',
-                    verticalAlign:'top',
                   }}
                   onMouseEnter={e => { if(d&&!isSel) e.currentTarget.style.background='var(--sf2)' }}
                   onMouseLeave={e => { if(!isSel) e.currentTarget.style.background=fest?'rgba(232,184,75,.06)':isToday?'var(--sf2)':(isWeekend&&d?'rgba(0,0,0,.01)':'transparent') }}
                 >
                   {d && (
                     <>
-                      {/* Day number */}
                       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:3 }}>
                         {isToday
                           ? <span style={{ width:20,height:20,borderRadius:'50%',background:'var(--ac)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,flexShrink:0 }}>{d}</span>
@@ -216,7 +241,6 @@ export default function Calendario() {
                         {fest && <span style={{ fontSize:7,background:'rgba(232,184,75,.22)',color:'#7A6020',borderRadius:3,padding:'1px 3px',fontWeight:600,lineHeight:1.4,maxWidth:52,textAlign:'right',flexShrink:0 }}>{fest.slice(0,12)}</span>}
                       </div>
 
-                      {/* Schedule labels (work + study hours) */}
                       {schedLabels.length > 0 && (
                         <div style={{ display:'flex', flexDirection:'column', gap:1, marginBottom:3 }}>
                           {schedLabels.map((sl, si) => (
@@ -227,16 +251,17 @@ export default function Calendario() {
                         </div>
                       )}
 
-                      {/* Event + study chips */}
                       <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                         {cellItems.slice(0,5).map((item, ci) => {
-                          const isStudy = !item.tipo || !TIPI_EVENTO[item.tipo]
-                          const isGoal = item.id?.toString().startsWith('goal-')
+                          const isStudy = item.corsoNome !== undefined
+                          const isGoal  = item.id?.toString().startsWith('goal-')
+                          const isGym   = item.tipo === 'palestra'
                           const color = isGoal ? '#7A5FA0'
-                            : isStudy ? STUDIO_COLOR
+                            : isGym    ? GYM_COLOR
+                            : isStudy  ? STUDIO_COLOR
                             : (TIPI_EVENTO[item.tipo]?.color || '#888')
-                          const label = isStudy
-                            ? (item.corsoNome ? item.corsoNome.slice(0,14) : item.titolo)
+                          const label = isGym   ? `🏋️ ${item.titolo}`
+                            : isStudy ? (item.corsoNome ? item.corsoNome.slice(0,14) : item.titolo)
                             : item.titolo
                           return (
                             <div key={item.id || ci} style={{
@@ -245,12 +270,13 @@ export default function Calendario() {
                               padding:'1px 4px', borderRadius:'0 3px 3px 0',
                               whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
                               lineHeight:1.6,
+                              textDecoration: isGym && item.completed ? 'line-through' : 'none',
+                              opacity: isGym && item.completed ? 0.5 : 1,
                             }}>
-                              {item.oraPianificata && isStudy && (
-                                <span style={{ opacity:.6, marginRight:2, fontFamily:"'DM Mono',monospace", fontSize:8 }}>{item.oraPianificata}</span>
-                              )}
-                              {item.ora && !isStudy && (
-                                <span style={{ opacity:.6, marginRight:2, fontFamily:"'DM Mono',monospace", fontSize:8 }}>{item.ora}</span>
+                              {(item.ora || item.oraPianificata) && (
+                                <span style={{ opacity:.6, marginRight:2, fontFamily:"'DM Mono',monospace", fontSize:8 }}>
+                                  {item.ora || item.oraPianificata}
+                                </span>
                               )}
                               {label}
                             </div>
@@ -279,11 +305,13 @@ export default function Calendario() {
               {selected ? formatShort(selected) : 'seleziona giorno'}
             </SectionHeader>
 
-            {/* Work+study info for selected day */}
             {selected && (() => {
               const dow = new Date(selected+'T12:00').getDay()
               const wo = getOrarioGiorno(dow)
               const st = getOrarioStudio(dow)
+              const gymBlock = getPalestraBlockGiorno(dow)
+              const giornoScheda = schedaSalute[dow]
+              const isGymRest = giornoScheda?.tipo === 'riposo' || giornoScheda?.tipo === 'riposo_attivo'
               return (
                 <div style={{ marginBottom:8, display:'flex', flexDirection:'column', gap:4 }}>
                   {wo?.abilitato && !isFestivita(selected, year) && (
@@ -300,6 +328,15 @@ export default function Calendario() {
                       </div>
                     )
                   })}
+                  {gymBlock && !isGymRest && (
+                    <div style={{ padding:'5px 9px', background:GYM_COLOR+'11', borderLeft:`2px solid ${GYM_COLOR}`, borderRadius:'0 6px 6px 0', fontSize:11, color:GYM_COLOR, fontFamily:"'DM Mono',monospace" }}>
+                      🏋️ {giornoScheda?.nome || 'Palestra'} {gymBlock.dalleConBuffer} → {gymBlock.alleConBuffer}
+                      {gymBlock.sede && <span style={{ opacity:.7 }}> · {gymBlock.sede}</span>}
+                      <div style={{ opacity:.6, fontSize:10, marginTop:1 }}>
+                        Allenamento {gymBlock.dalle}–{gymBlock.alle} + {gymBlock.bufferMinuti}min viaggio
+                      </div>
+                    </div>
+                  )}
                   {isFestivita(selected, year) && (
                     <div style={{ padding:'5px 9px', background:'rgba(232,184,75,.1)', borderLeft:'2px solid #E8B84B', borderRadius:'0 6px 6px 0', fontSize:11, color:'#7A6020' }}>
                       🎉 {getFestivitaNome(selected, year)}
@@ -337,19 +374,22 @@ export default function Calendario() {
               </InputRow>
             </FormPanel>
 
-            {/* Events for selected day */}
             {allSelected.length === 0 && !formOpen
               ? <EmptyState message={selected?'Nessun evento':'Clicca un giorno'} />
               : allSelected.map((item, i) => {
                 const isStudy = !!item.corsoNome
-                const isGoal = item.id?.toString().startsWith('goal-')
-                const color = isGoal?'#7A5FA0':isStudy?STUDIO_COLOR:(TIPI_EVENTO[item.tipo]?.color||'#888')
-                const badgeLabel = isGoal?'Scadenza':isStudy?item.corsoNome:(TIPI_EVENTO[item.tipo]?.label||item.tipo)
+                const isGoal  = item.id?.toString().startsWith('goal-')
+                const isGym   = item.tipo === 'palestra'
+                const color = isGoal?'#7A5FA0':isGym?GYM_COLOR:isStudy?STUDIO_COLOR:(TIPI_EVENTO[item.tipo]?.color||'#888')
+                const badgeLabel = isGoal?'Scadenza':isGym?(TIPI_GIORNO[item.tipoAllenamento]?.label||'Palestra'):isStudy?item.corsoNome:(TIPI_EVENTO[item.tipo]?.label||item.tipo)
                 return (
-                  <div key={item.id||i} style={{ marginBottom:7, padding:'8px 10px', background:color+'11', borderLeft:`3px solid ${color}`, borderRadius:'0 7px 7px 0', animation:'slideDown .14s ease' }}>
+                  <div key={item.id||i} style={{ marginBottom:7, padding:'8px 10px', background:color+'11', borderLeft:`3px solid ${color}`, borderRadius:'0 7px 7px 0', animation:'slideDown .14s ease', opacity: isGym&&item.completed?.7:1 }}>
                     <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:4 }}>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:500 }}>{item.titolo}</div>
+                        <div style={{ fontSize:13, fontWeight:500 }}>
+                          {isGym ? `🏋️ ${item.titolo}` : item.titolo}
+                          {isGym && item.completed && <span style={{ marginLeft:6, fontSize:10, color:GYM_COLOR }}>✓ completato</span>}
+                        </div>
                         <div style={{ display:'flex', gap:5, marginTop:3, flexWrap:'wrap', alignItems:'center' }}>
                           {(item.ora||item.oraPianificata) && (
                             <span style={{ fontSize:10,fontFamily:"'DM Mono',monospace",color:'var(--t3)' }}>
@@ -357,12 +397,18 @@ export default function Calendario() {
                             </span>
                           )}
                           <Badge color={color}>{badgeLabel}</Badge>
+                          {isGym && (
+                            <span style={{ fontSize:10, color:'var(--t3)' }}>
+                              {item.dalleConBuffer}–{item.alleConBuffer}
+                              {item.sede && ` · ${item.sede}`}
+                            </span>
+                          )}
                           {item.tipo==='permesso'&&item.ore&&<span style={{ fontSize:10,color:'var(--t3)' }}>{item.ore}h</span>}
                           {isStudy&&<span style={{ fontSize:10,color:'var(--t3)' }}>{item.durata_minuti}min · {item.tipo}</span>}
                         </div>
                         {item.note&&<div style={{ fontSize:11,color:'var(--t3)',marginTop:3 }}>{item.note}</div>}
                       </div>
-                      {!isStudy && !isGoal && (
+                      {!isStudy && !isGoal && !isGym && (
                         <button className="btn-danger" onClick={() => handleRemove(item.id)} style={{ flexShrink:0 }}>✕</button>
                       )}
                     </div>
@@ -397,6 +443,22 @@ export default function Calendario() {
                 </div>
               )
             })}
+            {/* Gym sessions this month */}
+            {(() => {
+              const gymCount = cells.filter(d => {
+                if (!d) return false
+                const ds = toDateStr(d)
+                return !!getGymChipForDate(ds)
+              }).length
+              if (!gymCount) return null
+              return (
+                <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:5 }}>
+                  <div style={{ width:8,height:8,borderRadius:2,background:GYM_COLOR+'33',borderLeft:`2px solid ${GYM_COLOR}`,flexShrink:0 }} />
+                  <span style={{ flex:1,fontSize:12,color:'var(--t2)' }}>Palestra</span>
+                  <span style={{ fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:500 }}>{gymCount}</span>
+                </div>
+              )
+            })()}
             {monthEvents.length===0&&festivitaMonth.length===0&&<EmptyState message="Nessun evento" />}
           </div>
         </div>
