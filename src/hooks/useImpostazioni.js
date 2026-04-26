@@ -204,7 +204,7 @@ export function useImpostazioni() {
   }
 
   return {
-    settings, update,
+    settings, update, saveSettings: setSettings,
     updateScheduleGiorno, updateStudioGiorno, updateStudioSlot, updatePalestraGiorno,
     getSchedule, getScheduleStudio, getSchedulePalestra,
     getOrarioGiorno, getOrarioStudio, getOrarioPalestra, getPalestraBlockGiorno,

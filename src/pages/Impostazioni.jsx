@@ -62,23 +62,105 @@ const GYM_COLOR = '#3A7059'
 
 export default function Impostazioni() {
   const {
-    settings, update,
-    updateScheduleGiorno, updateStudioGiorno, updateStudioSlot, updatePalestraGiorno,
-    getSchedule, getScheduleStudio, getSchedulePalestra,
+    settings, saveSettings,
     oreContrattualiMensili, oreStudioSettimanali, orePalestraSettimanali,
     tariffaCalcolata, reddtitoMedioMensile,
   } = useImpostazioni()
 
   const [tab, setTab] = useState('config')
-  const sch  = getSchedule()
-  const schS = getScheduleStudio()
-  const schP = getSchedulePalestra()
-  const oreContr   = oreContrattualiMensili()
-  const oreStudio  = oreStudioSettimanali()
-  const orePalest  = orePalestraSettimanali()
-  const tariffaCalc = tariffaCalcolata()
-  const redditoMedio = reddtitoMedioMensile()
-  const stipNetto = parseFloat(settings.stipendioNetto) || 0
+  const [draft, setDraft] = useState(settings)
+  const [isDirty, setIsDirty] = useState(false)
+
+  const handleUpdate = (key, val) => {
+    setDraft(prev => ({ ...prev, [key]: val }))
+    setIsDirty(true)
+  }
+
+  const handleUpdateNested = (objKey, id, patch) => {
+    setDraft(prev => ({
+      ...prev,
+      [objKey]: {
+        ...(prev[objKey] || {}),
+        [id]: { ...(prev[objKey]?.[id] || {}), ...patch }
+      }
+    }))
+    setIsDirty(true)
+  }
+
+  const handleUpdateStudioSlot = (dow, fascia, patch) => {
+    setDraft(prev => {
+      const g = prev.scheduleStudio?.[dow] || {}
+      return {
+        ...prev,
+        scheduleStudio: {
+          ...(prev.scheduleStudio || {}),
+          [dow]: { ...g, [fascia]: { ...(g[fascia] || {}), ...patch } }
+        }
+      }
+    })
+    setIsDirty(true)
+  }
+
+  const handleSave = () => {
+    saveSettings(draft)
+    setIsDirty(false)
+    showSuccess('Configurazione salvata permanentemente in memoria.')
+  }
+
+  const sch  = draft.scheduleLavorativo || {}
+  const schS = draft.scheduleStudio || {}
+  const schP = draft.schedulePalestra || {}
+  
+  // Computed values should use draft for preview
+  const oreContr = (() => {
+    let ore = 0
+    Object.values(sch).forEach(g => {
+      if (!g.abilitato || !g.dalle || !g.alle) return
+      const t2m = (t) => { const [h,m] = t.split(':').map(Number); return h*60+m }
+      ore += Math.max(0, (t2m(g.alle) - t2m(g.dalle)) / 60)
+    })
+    return Math.round(ore * 52 / 12 * 10) / 10
+  })()
+  
+  const tariffaCalc = (() => {
+    if (draft.tariffaOraria) return parseFloat(draft.tariffaOraria)
+    const netto = parseFloat(draft.stipendioNetto)
+    if (!netto || oreContr === 0) return 0
+    return Math.round((netto / oreContr) * 100) / 100
+  })()
+
+  const redditoMedio = (() => {
+    const base = parseFloat(draft.stipendioNetto) || 0
+    let bonus = 0
+    if (draft.tredicesima) bonus += base
+    if (draft.quattordicesima) bonus += base
+    return Math.round((base * 12 + bonus) / 12)
+  })()
+
+  const oreStudio = (() => {
+    let tot = 0
+    Object.values(schS).forEach(g => {
+      if (!g.abilitato) return
+      ;['mattina', 'pomeriggio'].forEach(f => {
+        const slot = g[f]
+        if (slot?.abilitato && slot.dalle && slot.alle) {
+          const t2m = (t) => { const [h,m] = t.split(':').map(Number); return h*60+m }
+          tot += Math.max(0, t2m(slot.alle) - t2m(slot.dalle))
+        }
+      })
+    })
+    return Math.round(tot / 60 * 10) / 10
+  })()
+
+  const orePalest = (() => {
+    let ore = 0
+    Object.values(schP).forEach(g => {
+      if (!g.abilitato || !g.dalle || !g.alle) return
+      const t2m = (t) => { const [h,m] = t.split(':').map(Number); return h*60+m }
+      ore += Math.max(0, (t2m(g.alle) - t2m(g.dalle)) / 60)
+    })
+    return Math.round(ore * 10) / 10
+  })()
 
   const handleImport = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
@@ -98,10 +180,21 @@ export default function Impostazioni() {
   )
 
   return (
-    <div style={{ padding:28, animation:'fadeUp .24s ease both' }}>
+    <div style={{ padding:28, animation:'fadeUp .24s ease both', paddingBottom:100 }}>
+      <div style={{ marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div>
+          <div className="label-xs" style={{ marginBottom:4 }}>sistema</div>
+          <div style={{ fontSize:20,fontWeight:700,letterSpacing:'-.02em' }}>Configurazione & Impostazioni</div>
+        </div>
+        
+        {isDirty && (
+          <button onClick={handleSave} className="btn-accent" style={{ padding:'10px 24px', boxShadow:'0 4px 12px rgba(196,106,60,.3)' }}>
+            💾 Salva Modifiche
+          </button>
+        )}
+      </div>
+
       <div style={{ marginBottom:20 }}>
-        <div className="label-xs" style={{ marginBottom:4 }}>sistema</div>
-        <div style={{ fontSize:20,fontWeight:700,letterSpacing:'-.02em',marginBottom:16 }}>Configurazione & Impostazioni</div>
         <div style={{ display:'inline-flex',border:'1px solid var(--bd2)',borderRadius:9,overflow:'hidden',background:'var(--sf)' }}>
           {[
             {id:'config',     l:'Configurazione'},
@@ -127,29 +220,29 @@ export default function Impostazioni() {
             <div className="card card-1">
               <div className="label-xs" style={{ marginBottom:4 }}>profilo e contratto</div>
               <Row label="Nome" sub="Visualizzato nella sidebar">
-                <Inp value={settings.name} onChange={e=>update('name',e.target.value)} placeholder="Il tuo nome" style={{ maxWidth:170 }} />
+                <Inp value={draft.name} onChange={e=>handleUpdate('name',e.target.value)} placeholder="Il tuo nome" style={{ maxWidth:170 }} />
               </Row>
               <Row label="Tipo contratto">
-                <select className="input-field" style={{ maxWidth:160 }} value={settings.tipoContratto} onChange={e=>update('tipoContratto',e.target.value)}>
+                <select className="input-field" style={{ maxWidth:160 }} value={draft.tipoContratto} onChange={e=>handleUpdate('tipoContratto',e.target.value)}>
                   <option value="dipendente">Dipendente</option>
                   <option value="freelance">Freelance / P.IVA</option>
                 </select>
               </Row>
               <Row label="Stipendio netto/mese" sub="Base per calcoli">
                 <div style={{ display:'flex',alignItems:'center',gap:5 }}>
-                  <Inp type="number" value={settings.stipendioNetto} onChange={e=>update('stipendioNetto',e.target.value)} placeholder="0" style={{ maxWidth:100 }} />
+                  <Inp type="number" value={draft.stipendioNetto} onChange={e=>handleUpdate('stipendioNetto',e.target.value)} placeholder="0" style={{ maxWidth:100 }} />
                   <span style={{ fontSize:12,color:'var(--t2)' }}>€</span>
                 </div>
               </Row>
               <Row label="Stipendio lordo/mese">
                 <div style={{ display:'flex',alignItems:'center',gap:5 }}>
-                  <Inp type="number" value={settings.stipendioLordo} onChange={e=>update('stipendioLordo',e.target.value)} placeholder="0" style={{ maxWidth:100 }} />
+                  <Inp type="number" value={draft.stipendioLordo} onChange={e=>handleUpdate('stipendioLordo',e.target.value)} placeholder="0" style={{ maxWidth:100 }} />
                   <span style={{ fontSize:12,color:'var(--t2)' }}>€</span>
                 </div>
               </Row>
-              <Row label="Tariffa oraria" sub={oreContr>0&&stipNetto>0?`Calcolata: €${tariffaCalc}/h`:'Sovrascrive calcolo auto'}>
+              <Row label="Tariffa oraria" sub={oreContr>0&&parseFloat(draft.stipendioNetto)>0?`Calcolata: €${tariffaCalc}/h`:'Sovrascrive calcolo auto'}>
                 <div style={{ display:'flex',alignItems:'center',gap:5 }}>
-                  <Inp type="number" value={settings.tariffaOraria} onChange={e=>update('tariffaOraria',e.target.value)} placeholder="auto" style={{ maxWidth:80 }} />
+                  <Inp type="number" value={draft.tariffaOraria} onChange={e=>handleUpdate('tariffaOraria',e.target.value)} placeholder="auto" style={{ maxWidth:80 }} />
                   <span style={{ fontSize:12,color:'var(--t2)' }}>€/h</span>
                 </div>
               </Row>
@@ -158,31 +251,31 @@ export default function Impostazioni() {
             {/* Mensilità */}
             <div className="card card-2">
               <div className="label-xs" style={{ marginBottom:4 }}>mensilità e permessi</div>
-              <Row label="Tredicesima"><Toggle checked={!!settings.tredicesima} onChange={v=>update('tredicesima',v)} /></Row>
-              {settings.tredicesima && (
+              <Row label="Tredicesima"><Toggle checked={!!draft.tredicesima} onChange={v=>handleUpdate('tredicesima',v)} /></Row>
+              {draft.tredicesima && (
                 <Row label="Mese erogazione 13ª">
-                  <select className="input-field" style={{ maxWidth:140 }} value={settings.meseTredicesima??11} onChange={e=>update('meseTredicesima',parseInt(e.target.value))}>
+                  <select className="input-field" style={{ maxWidth:140 }} value={draft.meseTredicesima??11} onChange={e=>handleUpdate('meseTredicesima',parseInt(e.target.value))}>
                     {MESI_N.map((m,i)=><option key={i} value={i}>{m}</option>)}
                   </select>
                 </Row>
               )}
-              <Row label="Quattordicesima"><Toggle checked={!!settings.quattordicesima} onChange={v=>update('quattordicesima',v)} /></Row>
-              {settings.quattordicesima && (
+              <Row label="Quattordicesima"><Toggle checked={!!draft.quattordicesima} onChange={v=>handleUpdate('quattordicesima',v)} /></Row>
+              {draft.quattordicesima && (
                 <Row label="Mese erogazione 14ª">
-                  <select className="input-field" style={{ maxWidth:140 }} value={settings.meseQuattordicesima??6} onChange={e=>update('meseQuattordicesima',parseInt(e.target.value))}>
+                  <select className="input-field" style={{ maxWidth:140 }} value={draft.meseQuattordicesima??6} onChange={e=>handleUpdate('meseQuattordicesima',parseInt(e.target.value))}>
                     {MESI_N.map((m,i)=><option key={i} value={i}>{m}</option>)}
                   </select>
                 </Row>
               )}
               <Row label="Giorni ferie annui">
                 <div style={{ display:'flex',alignItems:'center',gap:5 }}>
-                  <Inp type="number" value={settings.giorniFerieAnnui} onChange={e=>update('giorniFerieAnnui',parseInt(e.target.value)||0)} style={{ maxWidth:70 }} />
+                  <Inp type="number" value={draft.giorniFerieAnnui} onChange={e=>handleUpdate('giorniFerieAnnui',parseInt(e.target.value)||0)} style={{ maxWidth:70 }} />
                   <span style={{ fontSize:12,color:'var(--t2)' }}>giorni</span>
                 </div>
               </Row>
               <Row label="Ore permesso annue">
                 <div style={{ display:'flex',alignItems:'center',gap:5 }}>
-                  <Inp type="number" value={settings.orePermessoAnnuo} onChange={e=>update('orePermessoAnnuo',parseInt(e.target.value)||0)} style={{ maxWidth:70 }} />
+                  <Inp type="number" value={draft.orePermessoAnnuo} onChange={e=>handleUpdate('orePermessoAnnuo',parseInt(e.target.value)||0)} style={{ maxWidth:70 }} />
                   <span style={{ fontSize:12,color:'var(--t2)' }}>ore</span>
                 </div>
               </Row>
@@ -223,14 +316,14 @@ export default function Impostazioni() {
                   }}>
                     <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:s.abilitato?10:0 }}>
                       <span style={{ fontSize:11,fontWeight:700,color:s.abilitato?'var(--ac)':'var(--t3)',letterSpacing:'.04em' }}>{g.l.slice(0,3)}</span>
-                      <Toggle checked={s.abilitato} onChange={v=>updateScheduleGiorno(g.id,{abilitato:v})} />
+                      <Toggle checked={s.abilitato} onChange={v=>handleUpdateNested('scheduleLavorativo',g.id,{abilitato:v})} />
                     </div>
                     {s.abilitato && (
                       <div style={{ display:'flex',flexDirection:'column',gap:5 }}>
                         {[['dalle',s.dalle],['alle',s.alle]].map(([k,v]) => (
                           <div key={k}>
                             <div style={{ fontSize:9,color:'var(--t3)',marginBottom:2,letterSpacing:'.08em',textTransform:'uppercase' }}>{k}</div>
-                            <input type="time" value={v||''} onChange={e=>updateScheduleGiorno(g.id,{[k]:e.target.value})}
+                            <input type="time" value={v||''} onChange={e=>handleUpdateNested('scheduleLavorativo',g.id,{[k]:e.target.value})}
                               className="input-field" style={{ padding:'4px 5px',fontSize:12,fontFamily:"'DM Mono',monospace" }} />
                           </div>
                         ))}
@@ -266,7 +359,7 @@ export default function Impostazioni() {
                   }}>
                     <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
                       <span style={{ fontSize:11,fontWeight:700,color:hasAny?'#7A5FA0':'var(--t3)',letterSpacing:'.04em' }}>{g.l.slice(0,3)}</span>
-                      <Toggle checked={sd.abilitato} onChange={v=>updateStudioGiorno(g.id,{abilitato:v})} color="#7A5FA0" />
+                      <Toggle checked={sd.abilitato} onChange={v=>handleUpdateNested('scheduleStudio',g.id,{abilitato:v})} color="#7A5FA0" />
                     </div>
                     {sd.abilitato && (
                       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -279,11 +372,11 @@ export default function Impostazioni() {
                           }}>
                             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:slot.abilitato?7:0 }}>
                               <span style={{ fontSize:10,fontWeight:600,color:slot.abilitato?'#7A5FA0':'var(--t3)' }}>{label}</span>
-                              <Toggle checked={slot.abilitato} onChange={v=>updateStudioSlot(g.id,fascia,{abilitato:v})} color="#7A5FA0" />
+                              <Toggle checked={slot.abilitato} onChange={v=>handleUpdateStudioSlot(g.id,fascia,{abilitato:v})} color="#7A5FA0" />
                             </div>
                             {slot.abilitato && (
                               <TimeRange dalle={slot.dalle} alle={slot.alle}
-                                onChange={(k,v)=>updateStudioSlot(g.id,fascia,{[k]:v})} />
+                                onChange={(k,v)=>handleUpdateStudioSlot(g.id,fascia,{[k]:v})} />
                             )}
                           </div>
                         ))}
@@ -322,7 +415,7 @@ export default function Impostazioni() {
                       <span style={{ fontSize:11,fontWeight:700,color:gp.abilitato?GYM_COLOR:'var(--t3)',letterSpacing:'.04em' }}>
                         {g.l.slice(0,3)}
                       </span>
-                      <Toggle checked={gp.abilitato} onChange={v=>updatePalestraGiorno(g.id,{abilitato:v})} color={GYM_COLOR} />
+                      <Toggle checked={gp.abilitato} onChange={v=>handleUpdateNested('schedulePalestra',g.id,{abilitato:v})} color={GYM_COLOR} />
                     </div>
 
                     {gp.abilitato && (
@@ -330,25 +423,25 @@ export default function Impostazioni() {
                         <div>
                           <div style={{ fontSize:9,color:'var(--t3)',marginBottom:2,textTransform:'uppercase',letterSpacing:'.08em' }}>Inizio</div>
                           <input type="time" value={gp.dalle||'18:30'}
-                            onChange={e=>updatePalestraGiorno(g.id,{dalle:e.target.value})}
+                            onChange={e=>handleUpdateNested('schedulePalestra',g.id,{dalle:e.target.value})}
                             className="input-field" style={{ padding:'4px 5px',fontSize:11,fontFamily:"'DM Mono',monospace" }} />
                         </div>
                         <div>
                           <div style={{ fontSize:9,color:'var(--t3)',marginBottom:2,textTransform:'uppercase',letterSpacing:'.08em' }}>Fine</div>
                           <input type="time" value={gp.alle||'20:00'}
-                            onChange={e=>updatePalestraGiorno(g.id,{alle:e.target.value})}
+                            onChange={e=>handleUpdateNested('schedulePalestra',g.id,{alle:e.target.value})}
                             className="input-field" style={{ padding:'4px 5px',fontSize:11,fontFamily:"'DM Mono',monospace" }} />
                         </div>
                         <div>
                           <div style={{ fontSize:9,color:'var(--t3)',marginBottom:2,textTransform:'uppercase',letterSpacing:'.08em' }}>Buffer (min)</div>
                           <input type="number" value={gp.bufferMinuti||30} min={0} max={60}
-                            onChange={e=>updatePalestraGiorno(g.id,{bufferMinuti:parseInt(e.target.value)||0})}
+                            onChange={e=>handleUpdateNested('schedulePalestra',g.id,{bufferMinuti:parseInt(e.target.value)||0})}
                             className="input-field" style={{ padding:'4px 5px',fontSize:11,fontFamily:"'DM Mono',monospace" }} />
                         </div>
                         <div>
                           <div style={{ fontSize:9,color:'var(--t3)',marginBottom:2,textTransform:'uppercase',letterSpacing:'.08em' }}>Sede</div>
                           <input type="text" value={gp.sede||''} placeholder="Es. Virgin Active"
-                            onChange={e=>updatePalestraGiorno(g.id,{sede:e.target.value})}
+                            onChange={e=>handleUpdateNested('schedulePalestra',g.id,{sede:e.target.value})}
                             className="input-field" style={{ padding:'4px 5px',fontSize:10 }} />
                         </div>
                       </div>
@@ -371,8 +464,8 @@ export default function Impostazioni() {
               Consente la generazione automatica dei piani di studio dalla sezione Studio.
             </div>
             <Row label="API Key" sub="Salvata localmente nel browser">
-              <input className="input-field" type="password" value={settings.anthropicApiKey||''}
-                onChange={e=>update('anthropicApiKey',e.target.value)}
+              <input className="input-field" type="password" value={draft.anthropicApiKey||''}
+                onChange={e=>handleUpdate('anthropicApiKey',e.target.value)}
                 placeholder="sk-ant-api03-..." style={{ maxWidth:240,fontFamily:"'DM Mono',monospace" }} />
             </Row>
           </div>
