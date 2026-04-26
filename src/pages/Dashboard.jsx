@@ -42,7 +42,7 @@ export default function Dashboard() {
   const chartData = andamentoMesi()
   const ore = totaleOre(year, month)
   const rate = tariffaCalcolata()
-  const stimato = rate > 0 ? Math.round(ore * rate) : null
+  const stimato = rate > 0 ? Math.round(ore * rate * 100) / 100 : null
   const redditoMedio = reddtitoMedioMensile()
   const studyToday = getTodayTasks()
   const lateCount = getLateTasksCount()

@@ -134,7 +134,7 @@ export default function Impostazioni() {
     let bonus = 0
     if (draft.tredicesima) bonus += base
     if (draft.quattordicesima) bonus += base
-    return Math.round((base * 12 + bonus) / 12)
+    return Math.round(((base * 12 + bonus) / 12) * 100) / 100
   })()
 
   const oreStudio = (() => {

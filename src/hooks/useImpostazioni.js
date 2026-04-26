@@ -190,7 +190,7 @@ export function useImpostazioni() {
     let bonus = 0
     if (settings.tredicesima) bonus += base
     if (settings.quattordicesima) bonus += base
-    return Math.round((base * 12 + bonus) / 12)
+    return Math.round(((base * 12 + bonus) / 12) * 100) / 100
   }
 
   const orePalestraSettimanali = () => {

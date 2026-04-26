@@ -53,7 +53,7 @@ export function useRisparmi() {
       (scad.getFullYear() - now.getFullYear()) * 12 + (scad.getMonth() - now.getMonth())
     )
     const mancante = Math.max(0, g.target - g.corrente)
-    return { mesi, contributo: Math.ceil(mancante / mesi), mancante }
+    return { mesi, contributo: Math.round((mancante / mesi) * 100) / 100, mancante }
   }
 
   const totaleRisparmi = () =>

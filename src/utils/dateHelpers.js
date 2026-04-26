@@ -39,7 +39,7 @@ export function buildCalendarGrid(year, month) {
 }
 
 export function formatCurrency(n, currency = 'EUR') {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('it-IT', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 }
 
 export function formatCurrencyDec(n, currency = 'EUR') {

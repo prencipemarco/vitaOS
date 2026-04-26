@@ -32,7 +32,7 @@ export function useFinanze() {
     const mese = forMonth(year, month)
     const entrate = mese.filter(t=>t.tipo==='entrata').reduce((s,t)=>s+t.importo,0)
     const uscite  = mese.filter(t=>t.tipo==='uscita').reduce((s,t)=>s+t.importo,0)
-    return { entrate:Math.round(entrate), uscite:Math.round(uscite), netto:Math.round(entrate-uscite) }
+    return { entrate, uscite, netto: entrate - uscite }
   }
 
   const perCategoria = (year, month) => {
@@ -40,7 +40,7 @@ export function useFinanze() {
     forMonth(year, month).filter(t=>t.tipo==='uscita').forEach(t => {
       acc[t.cat] = (acc[t.cat]||0)+t.importo
     })
-    return Object.entries(acc).map(([name,value])=>({ name, value:Math.round(value) }))
+    return Object.entries(acc).map(([name,value])=>({ name, value }))
       .sort((a,b)=>b.value-a.value)
   }
 
@@ -69,8 +69,8 @@ export function useFinanze() {
   const totalePrevisteMese = (year, month) => {
     const lista = previsteDelMese(year, month)
     return {
-      uscite:  Math.round(lista.filter(p=>p.tipo==='uscita').reduce((s,p)=>s+p.importo,0)),
-      entrate: Math.round(lista.filter(p=>p.tipo==='entrata').reduce((s,p)=>s+p.importo,0)),
+      uscite:  lista.filter(p=>p.tipo==='uscita').reduce((s,p)=>s+p.importo,0),
+      entrate: lista.filter(p=>p.tipo==='entrata').reduce((s,p)=>s+p.importo,0),
     }
   }
 
