@@ -15,6 +15,11 @@ export function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
+export function toDateStr(date) {
+  if (!date) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
 export function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate()
 }
