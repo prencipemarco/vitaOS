@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useImpostazioni } from '../hooks/useImpostazioni'
-import { exportBackup, importBackup, resetSezione, resetTutto, SEZIONI } from '../utils/backupManager'
+import { exportBackup, importBackup, resetSezione, resetTutto, SEZIONI, exportToCSV } from '../utils/backupManager'
 import { formatCurrency } from '../utils/dateHelpers'
 import { showConfirm, showSuccess, showError } from '../components/ui'
 
@@ -485,6 +485,16 @@ export default function Impostazioni() {
                 <span className="btn-ghost" style={{ display:'inline-block' }}>Scegli file</span>
                 <input type="file" accept=".json" style={{ display:'none' }} onChange={handleImport} />
               </label>
+            </Row>
+          </div>
+
+          <div className="card card-5">
+            <div className="label-xs" style={{ marginBottom:4 }}>esportazione analitica (CSV)</div>
+            <Row label="Dati Finanze" sub="Tutte le transazioni">
+              <button className="btn-ghost" onClick={() => { exportToCSV('finanze'); showSuccess('CSV Finanze generato.') }}>Scarica CSV</button>
+            </Row>
+            <Row label="Dati Salute" sub="Tutte le sessioni">
+              <button className="btn-ghost" onClick={() => { exportToCSV('salute_sessioni'); showSuccess('CSV Salute generato.') }}>Scarica CSV</button>
             </Row>
           </div>
 

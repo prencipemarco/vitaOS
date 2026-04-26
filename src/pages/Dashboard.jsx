@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { useCalendario, TIPI_EVENTO } from '../hooks/useCalendario'
 import { useFinanze } from '../hooks/useFinanze'
 import { useRisparmi } from '../hooks/useRisparmi'
@@ -6,8 +6,9 @@ import { useFirme } from '../hooks/useFirme'
 import { useImpostazioni } from '../hooks/useImpostazioni'
 import { useStudio, TIPI_CORSO } from '../hooks/useStudio'
 import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
+import { useHabits } from '../hooks/useHabits'
 import { PageHeader, ProgressBar, Badge, Dot, EmptyState } from '../components/ui'
-import { formatCurrency, todayStr, formatShort } from '../utils/dateHelpers'
+import { formatCurrency, todayStr, formatShort, toDateStr } from '../utils/dateHelpers'
 
 const STUDIO_COLOR = '#7A5FA0'
 const GYM_COLOR    = '#3A7059'
@@ -29,9 +30,10 @@ export default function Dashboard() {
   const { riepilogo, andamentoMesi, totalePrevisteMese } = useFinanze()
   const { goals, totaleRisparmi } = useRisparmi()
   const { totaleOre } = useFirme()
-  const { settings, tariffaCalcolata, reddtitoMedioMensile, getPalestraBlockGiorno } = useImpostazioni()
+  const { settings, tariffaCalcolata, reddtitoMedioMensile, getPalestraBlockGiorno, oreContrattualiMensili } = useImpostazioni()
   const { corsi, getStats, getTodayTasks, getLateTasksCount, completeTask } = useStudio()
   const { scheda: schedaSalute, getSessioneOggi, getStatsGenerali: getSaluteStats, startSessione } = useSalute()
+  const { habits, toggleHabit, getTodayScore } = useHabits()
 
   const today = todayStr()
   const todayCalEvents = eventsForDate(today)
@@ -74,6 +76,20 @@ export default function Dashboard() {
       alleConBuffer: gymBlock.alleConBuffer,
     }] : []),
   ].sort((a,b) => a.ora.localeCompare(b.ora))
+
+  // Life Balance Scores
+  const balanceData = [
+    { subject: 'Lavoro', A: Math.min(100, ore > 0 ? (ore / (oreContrattualiMensili() || 160) * 100) : 0), fullMark: 100 },
+    { subject: 'Salute', A: Math.min(100, (saluteStats.thisMonth / 12) * 100), fullMark: 100 },
+    { subject: 'Studio', A: (() => {
+      const allStats = corsi.map(c => getStats(c.id))
+      const total = allStats.reduce((acc, s) => acc + s.total, 0)
+      const done = allStats.reduce((acc, s) => acc + s.completati, 0)
+      return total > 0 ? (done / total * 100) : 0
+    })(), fullMark: 100 },
+    { subject: 'Finanze', A: Math.min(100, redditoMedio > 0 ? (Math.max(0, fin.netto) / redditoMedio * 100) : 0), fullMark: 100 },
+    { subject: 'Abitudini', A: getTodayScore(), fullMark: 100 },
+  ]
 
   const isConfigured = settings.stipendioNetto || settings.name
   const dateLabel = now.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' })
@@ -184,9 +200,20 @@ export default function Dashboard() {
             </ResponsiveContainer>
           }
         </div>
+        {/* Life Balance Radar */}
+        <div className="card card-5" style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+          <div className="label-xs" style={{ width:'100%', marginBottom:4 }}>life balance radar</div>
+          <ResponsiveContainer width="100%" height={170}>
+            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={balanceData}>
+              <PolarGrid stroke="var(--bd)" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize:9, fill:'var(--t2)', fontWeight:500 }} />
+              <Radar name="Bilancio" dataKey="A" stroke="var(--ac)" fill="var(--ac)" fillOpacity={0.3} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:10 }}>
         {/* Goals */}
         <div className="card">
           <div className="label-xs" style={{ marginBottom:12 }}>obiettivi risparmio</div>
@@ -292,6 +319,44 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Habits Widget */}
+        <div className="card">
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div className="label-xs">abitudini oggi</div>
+            <span style={{ fontSize:11, color:'var(--ac)', fontWeight:700 }}>{getTodayScore()}%</span>
+          </div>
+          {habits.length === 0 ? (
+            <EmptyState message="Nessuna abitudine impostata" />
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {habits.map(h => {
+                const todayDone = h.completati[toDateStr(now)]
+                return (
+                  <div key={h.id} 
+                    onClick={() => toggleHabit(h.id, toDateStr(now))}
+                    style={{ 
+                      display:'flex', alignItems:'center', gap:10, padding:'8px 10px', 
+                      background: todayDone ? h.colore + '15' : 'var(--sf2)',
+                      borderRadius:8, border:`1px solid ${todayDone ? h.colore + '40' : 'var(--bd)'}`,
+                      cursor:'pointer', transition:'all .14s'
+                    }}
+                  >
+                    <span style={{ fontSize:18 }}>{h.icona}</span>
+                    <span style={{ flex:1, fontSize:12, fontWeight:500, color: todayDone ? h.colore : 'var(--t1)' }}>{h.nome}</span>
+                    <div style={{ 
+                      width:18, height:18, borderRadius:4, border:`1.5px solid ${todayDone ? h.colore : 'var(--bd2)'}`,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      background: todayDone ? h.colore : 'transparent', color:'#fff', fontSize:10
+                    }}>
+                      {todayDone && '✓'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

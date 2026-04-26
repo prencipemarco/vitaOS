@@ -9,6 +9,8 @@ export const SEZIONI = {
   studio_tasks:  { key:'wl_studio_tasks',        label:'Task studio' },
   salute_scheda: { key:'wl_salute_scheda',       label:'Scheda allenamento' },
   salute_sessioni:{ key:'wl_salute_sessioni',    label:'Sessioni allenamento' },
+  habits:        { key:'wl_habits',              label:'Abitudini' },
+  notes:         { key:'wl_notes',               label:'Note' },
   impostazioni:  { key:'wl_settings',            label:'Impostazioni' },
 }
 const ALL_KEYS = Object.values(SEZIONI).map(s => s.key)
@@ -51,4 +53,29 @@ export function resetSezione(key) {
 
 export function resetTutto() {
   ALL_KEYS.forEach(k => localStorage.removeItem(k))
+}
+
+export function exportToCSV(key) {
+  const raw = localStorage.getItem(SEZIONI[key]?.key)
+  if (!raw) return
+  const data = JSON.parse(raw)
+  if (!Array.isArray(data) || data.length === 0) return
+
+  let csv = ''
+  if (key === 'finanze') {
+    csv = 'Data,Titolo,Categoria,Importo,Tipo\n'
+    csv += data.map(t => `${t.data},"${t.titolo}","${t.categoria}",${t.importo},${t.tipo}`).join('\n')
+  } else if (key === 'salute_sessioni') {
+    csv = 'Data,Nome,Tipo,Durata(min),Note\n'
+    csv += data.map(s => `${s.data},"${s.nome}","${s.tipo}",${s.durata},"${s.note||''}"`).join('\n')
+  }
+
+  if (!csv) return
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `vitaOS-${key}-${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
