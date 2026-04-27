@@ -557,7 +557,7 @@ export default function Salute() {
                         {g.l}{isToday&&<span style={{fontSize:9,color:'var(--ac)',fontWeight:700}}>●</span>}
                         {!gp.abilitato&&<span style={{fontSize:9,color:'var(--t3)',fontWeight:400,marginLeft:2}}>riposo</span>}
                       </div>
-                      <div style={{fontSize:10,color:'var(--t3)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{gg.nome||tipo.label}</div>
+                      <div style={{fontSize:10,color:'var(--t3)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{gp.abilitato ? (gg.nome||tipo.label) : tipo.label}</div>
                     </div>
                     {gp.abilitato&&<span style={{fontSize:10,color:'var(--t3)',fontFamily:"'DM Mono',monospace"}}>{(gg.esercizi||[]).length}ex</span>}
                   </div>
@@ -570,7 +570,8 @@ export default function Salute() {
             {(()=>{
               const g=scheda[selectedDow]||{}
               const gp=palSched[selectedDow]||{}
-              const tipo=TIPI_GIORNO[g.tipo]||TIPI_GIORNO.riposo
+              const effectiveTipo = gp.abilitato ? (g.tipo||'custom') : 'riposo'
+              const tipo=TIPI_GIORNO[effectiveTipo]||TIPI_GIORNO.riposo
               const dowLabel=GIORNI_FULL.find(x=>x.id===selectedDow)?.l
               const isGymConfigured=gp.abilitato
               return (
