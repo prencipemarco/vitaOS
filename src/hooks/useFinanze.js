@@ -64,9 +64,12 @@ export function useFinanze() {
     setPreviste(prev => prev.map(p => p.id === id ? { ...p, ...patch, importo: patch.importo !== undefined ? parseFloat(patch.importo) : p.importo } : p))
   }
   
-  const confirmPrevista = (id, dataEffettiva) => {
-    const p = previste.find(x => x.id === id)
+  const confirmPrevista = (id, dataEffettiva, patch) => {
+    let p = previste.find(x => x.id === id)
     if (!p) return
+    if (patch) {
+      p = { ...p, ...patch, importo: patch.importo !== undefined ? parseFloat(patch.importo) : p.importo }
+    }
     addTransazione({
       desc: p.desc,
       importo: p.importo,

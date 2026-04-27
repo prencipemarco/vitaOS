@@ -42,10 +42,19 @@ export default function Finanze() {
 
   const [editingPrevId, setEditingPrevId] = useState(null)
   const [editPrevForm, setEditPrevForm] = useState(null)
+  const [confirmingPrevId, setConfirmingPrevId] = useState(null)
+  const [confirmPrevForm, setConfirmPrevForm] = useState(null)
 
   const handleEditPrev = (p) => {
     setEditingPrevId(p.id)
     setEditPrevForm({ ...p })
+    setConfirmingPrevId(null)
+  }
+
+  const handleConfirmStart = (p) => {
+    setConfirmingPrevId(p.id)
+    setConfirmPrevForm({ ...p })
+    setEditingPrevId(null)
   }
 
   const handleSaveEditPrev = () => {
@@ -53,6 +62,13 @@ export default function Finanze() {
     setEditingPrevId(null)
     setEditPrevForm(null)
     showSuccess('Previsione aggiornata.')
+  }
+
+  const handleFinalConfirm = () => {
+    confirmPrevista(confirmingPrevId, null, confirmPrevForm)
+    setConfirmingPrevId(null)
+    setConfirmPrevForm(null)
+    showSuccess(`Confermata: ${confirmPrevForm.desc}`)
   }
 
   const fin = riepilogo(year, month)
@@ -269,6 +285,7 @@ export default function Finanze() {
             {monthPrev.length===0&&!prevOpen?<EmptyState message="Nessuna transazione prevista" />
             :monthPrev.map(p=>{
               const isEditing = editingPrevId === p.id
+              const isConfirming = confirmingPrevId === p.id
               const editCats = editPrevForm?.tipo === 'uscita' ? CATEGORIE_USCITE : CATEGORIE_ENTRATE
 
               if (isEditing) return (
@@ -289,6 +306,22 @@ export default function Finanze() {
                 </div>
               )
 
+              if (isConfirming) return (
+                <div key={p.id} className="row-item" style={{ background:'var(--ac-bg)', borderRadius:8, padding:'10px 12px' }}>
+                  <div style={{ flex:1 }}>
+                    <div className="label-xs" style={{ marginBottom:6 }}>Conferma importo finale</div>
+                    <InputRow>
+                      <input className="input-field" value={confirmPrevForm.desc} onChange={e=>setConfirmPrevForm({...confirmPrevForm, desc:e.target.value})} style={{ fontSize:12 }} />
+                      <input className="input-field" type="number" value={confirmPrevForm.importo} onChange={e=>setConfirmPrevForm({...confirmPrevForm, importo:e.target.value})} style={{ maxWidth:80, fontFamily:"'DM Mono',monospace" }} />
+                    </InputRow>
+                  </div>
+                  <div style={{ display:'flex', gap:6, marginLeft:10 }}>
+                    <button className="btn-ghost" onClick={() => setConfirmingPrevId(null)}>✕</button>
+                    <button className="btn-accent" onClick={handleFinalConfirm} style={{ padding:'6px 12px' }}>✓ Conferma</button>
+                  </div>
+                </div>
+              )
+
               return (
                 <div key={p.id} className="row-item">
                   <div style={{ flex:1 }}>
@@ -306,10 +339,7 @@ export default function Finanze() {
                     </button>
                     <button className="btn-ghost" title="Conferma come transazione effettiva"
                       style={{ padding:'4px 7px', borderColor:'var(--go)', color:'var(--go)', fontSize:11 }}
-                      onClick={() => {
-                        confirmPrevista(p.id)
-                        showSuccess(`Confermata: ${p.desc}`)
-                      }}>
+                      onClick={() => handleConfirmStart(p)}>
                       ✓
                     </button>
                     <button className="btn-danger" onClick={()=>handleRemovePrev(p)}>✕</button>
