@@ -202,8 +202,11 @@ export default function Dashboard() {
             </ResponsiveContainer>
           }
         </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
         {/* Life Balance Radar */}
-        <div className="card card-5" style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+        <div className="card" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
           <div className="label-xs" style={{ width:'100%', marginBottom:4 }}>life balance radar</div>
           <ResponsiveContainer width="100%" height={170}>
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={balanceData}>
@@ -213,9 +216,36 @@ export default function Dashboard() {
             </RadarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Notes Widget */}
+        <div className="card">
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div className="label-xs">note recenti</div>
+            <span style={{ fontSize:10, color:'var(--t3)' }}>{notes.length} totali</span>
+          </div>
+          {notes.length === 0 ? (
+            <EmptyState message="Nessuna nota — vai in Note" />
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {notes.filter(n => n.fissata).slice(0, 2).concat(notes.filter(n => !n.fissata).slice(0, 3)).slice(0, 3).map(n => (
+                <div key={n.id} style={{ 
+                  padding:'8px 10px', background:'var(--sf2)', borderRadius:7,
+                  borderLeft:`3px solid ${n.fissata ? 'var(--ac)' : 'transparent'}`,
+                }}>
+                  <div style={{ fontSize:12, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {n.fissata && '📌 '}{n.titolo}
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--t3)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {n.contenuto || 'Senza contenuto'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:10 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10 }}>
         {/* Goals */}
         <div className="card">
           <div className="label-xs" style={{ marginBottom:12 }}>obiettivi risparmio</div>
@@ -359,52 +389,6 @@ export default function Dashboard() {
               })}
             </div>
           )}
-        </div>
-        
-        {/* Notes Widget */}
-        <div className="card">
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-            <div className="label-xs">note recenti</div>
-            <span style={{ fontSize:10, color:'var(--t3)' }}>{notes.length} totali</span>
-          </div>
-          {notes.length === 0 ? (
-            <EmptyState message="Nessuna nota — vai in Note" />
-          ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              {notes.filter(n => n.fissata).slice(0, 2).concat(notes.filter(n => !n.fissata).slice(0, 3)).slice(0, 4).map(n => (
-                <div key={n.id} style={{ 
-                  padding:'8px 10px', background:'var(--sf2)', borderRadius:7,
-                  borderLeft:`3px solid ${n.fissata ? 'var(--ac)' : 'transparent'}`,
-                  transition:'background .12s'
-                }}>
-                  <div style={{ fontSize:12, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                    {n.fissata && '📌 '}{n.titolo}
-                  </div>
-                  <div style={{ fontSize:10, color:'var(--t3)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginTop:2 }}>
-                    {n.contenuto || 'Senza contenuto'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Insights / Balance Widget */}
-        <div className="card" style={{ background:'var(--ac-bg)', border:'1px solid rgba(196,106,60,.1)' }}>
-          <div className="label-xs" style={{ marginBottom:12, color:'var(--ac)' }}>insight finanziario</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            <div style={{ fontSize:13, lineHeight:1.5 }}>
-              Hai pianificato <strong style={{ color:'var(--ac)' }}>{formatCurrency(previste.uscite)}</strong> di spese fisse per questo mese.
-            </div>
-            <div style={{ fontSize:11, color:'var(--t2)', background:'var(--sf)', padding:'8px 10px', borderRadius:7, border:'1px solid var(--bd)' }}>
-              Proiezione saldo: <strong style={{ fontFamily:"'DM Mono',monospace" }}>{formatCurrency(fin.netto + previste.entrate - previste.uscite)}</strong>
-            </div>
-            {totaleRisparmi() > 0 && (
-              <div style={{ fontSize:11, color:'var(--t3)' }}>
-                Il tuo patrimonio è cresciuto del <strong style={{ color:'var(--go)' }}>{Math.round((fin.netto / (totaleRisparmi() || 1)) * 100)}%</strong> questo mese.
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
