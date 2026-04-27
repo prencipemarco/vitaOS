@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useStudio, TIPI_CORSO, TIPI_TASK } from '../hooks/useStudio'
 import { useImpostazioni } from '../hooks/useImpostazioni'
@@ -729,8 +730,8 @@ export default function Studio() {
         </div>
       )}
       {/* ── MODAL SCHEDULER ── */}
-      {scheduleConfig && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center', padding:20, backdropFilter:'blur(4px)' }}>
+      {scheduleConfig && createPortal(
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20, backdropFilter:'blur(4px)' }}>
           <div className="card" style={{ width:'100%', maxWidth:380, animation:'slideUp .2s ease', boxShadow:'0 10px 40px rgba(0,0,0,0.1)' }}>
             <div style={{ fontSize:16, fontWeight:700, marginBottom:16 }}>Configura Pianificazione</div>
             
@@ -754,7 +755,8 @@ export default function Studio() {
               <button className="btn-accent" onClick={confirmSchedule}>⚡ Genera Piano</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
