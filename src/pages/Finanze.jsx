@@ -38,7 +38,7 @@ export default function Finanze() {
   const [prevForm, setPrevForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',ricorrente:false,mese:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}` })
 
   const { transazioni,addTransazione,removeTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,
-    getSaldoDisponibile,previste,addPrevista,removePrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
+    getSaldoDisponibile,previste,addPrevista,removePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
 
   const fin = riepilogo(year, month)
   const catData = perCategoria(year, month)
@@ -261,7 +261,17 @@ export default function Finanze() {
                 <span style={{ fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,marginRight:8,color:p.tipo==='entrata'?'var(--go)':'var(--rd)' }}>
                   {p.tipo==='entrata'?'+':'-'}{formatCurrency(p.importo)}
                 </span>
-                <button className="btn-danger" onClick={()=>handleRemovePrev(p)}>✕</button>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button className="btn-ghost" 
+                    style={{ padding:'4px 7px', borderColor:'var(--go)', color:'var(--go)', fontSize:11 }}
+                    onClick={() => {
+                      confirmPrevista(p.id)
+                      showSuccess(`Confermata: ${p.desc}`)
+                    }}>
+                    ✓
+                  </button>
+                  <button className="btn-danger" onClick={()=>handleRemovePrev(p)}>✕</button>
+                </div>
               </div>
             ))}
           </div>

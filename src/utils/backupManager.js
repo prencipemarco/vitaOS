@@ -9,6 +9,7 @@ export const SEZIONI = {
   studio_tasks:  { key:'wl_studio_tasks',        label:'Task studio' },
   salute_scheda: { key:'wl_salute_scheda',       label:'Scheda allenamento' },
   salute_sessioni:{ key:'wl_salute_sessioni',    label:'Sessioni allenamento' },
+  salute_corse:   { key:'wl_salute_corse',       label:'Sessioni corsa/cardio' },
   habits:        { key:'wl_habits',              label:'Abitudini' },
   notes:         { key:'wl_notes',               label:'Note' },
   impostazioni:  { key:'wl_settings',            label:'Impostazioni' },
