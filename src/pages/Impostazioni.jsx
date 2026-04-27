@@ -171,12 +171,12 @@ export default function Impostazioni() {
 
   const handleResetSezione = (key) => showConfirm(
     `Cancellare: ${SEZIONI[key]?.label}?`,
-    () => { resetSezione(key); setTimeout(() => window.location.reload(), 400) }
+    async () => { await resetSezione(key); setTimeout(() => window.location.reload(), 400) }
   )
 
   const handleResetTutto = () => showConfirm(
     'Cancellare TUTTI i dati? Operazione irreversibile.',
-    () => { resetTutto(); window.location.reload() }
+    async () => { await resetTutto(); window.location.reload() }
   )
 
   return (
@@ -478,7 +478,7 @@ export default function Impostazioni() {
           <div className="card card-1">
             <div className="label-xs" style={{ marginBottom:4 }}>backup e ripristino</div>
             <Row label="Esporta tutti i dati" sub="File JSON scaricabile">
-              <button className="btn-ghost" onClick={() => { exportBackup(); showSuccess('Backup esportato.') }}>Esporta</button>
+              <button className="btn-ghost" onClick={async () => { await exportBackup(); showSuccess('Backup esportato.') }}>Esporta</button>
             </Row>
             <Row label="Importa backup" sub="Ripristina da file esportato">
               <label style={{ cursor:'pointer' }}>
@@ -491,10 +491,10 @@ export default function Impostazioni() {
           <div className="card card-5">
             <div className="label-xs" style={{ marginBottom:4 }}>esportazione analitica (CSV)</div>
             <Row label="Dati Finanze" sub="Tutte le transazioni">
-              <button className="btn-ghost" onClick={() => { exportToCSV('finanze'); showSuccess('CSV Finanze generato.') }}>Scarica CSV</button>
+              <button className="btn-ghost" onClick={async () => { await exportToCSV('finanze'); showSuccess('CSV Finanze generato.') }}>Scarica CSV</button>
             </Row>
             <Row label="Dati Salute" sub="Tutte le sessioni">
-              <button className="btn-ghost" onClick={() => { exportToCSV('salute_sessioni'); showSuccess('CSV Salute generato.') }}>Scarica CSV</button>
+              <button className="btn-ghost" onClick={async () => { await exportToCSV('salute_sessioni'); showSuccess('CSV Salute generato.') }}>Scarica CSV</button>
             </Row>
           </div>
 

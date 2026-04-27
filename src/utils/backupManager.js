@@ -1,3 +1,6 @@
+import { get, set, del } from 'idb-keyval'
+import { z } from 'zod'
+
 export const SEZIONI = {
   calendario:    { key:'wl_calendario',          label:'Calendario' },
   firme:         { key:'wl_firme',               label:'Foglio Firme' },
@@ -16,11 +19,20 @@ export const SEZIONI = {
 }
 const ALL_KEYS = Object.values(SEZIONI).map(s => s.key)
 
-export function exportBackup() {
+const BackupSchema = z.object({
+  version: z.number().optional(),
+  exportedAt: z.string().optional(),
+  data: z.record(z.string(), z.any()).optional()
+}).or(z.record(z.string(), z.any()))
+
+export async function exportBackup() {
   const data = {}
-  ALL_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = JSON.parse(v) })
+  for (const k of ALL_KEYS) {
+    const v = await get(k)
+    if (v !== undefined) data[k] = v
+  }
   const blob = new Blob(
-    [JSON.stringify({ version: 4, exportedAt: new Date().toISOString(), data }, null, 2)],
+    [JSON.stringify({ version: 5, exportedAt: new Date().toISOString(), data }, null, 2)],
     { type: 'application/json' }
   )
   const url = URL.createObjectURL(blob)
@@ -31,44 +43,56 @@ export function exportBackup() {
   URL.revokeObjectURL(url)
 }
 
-export function importBackup(file) {
+export async function importBackup(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader()
-    r.onload = e => {
+    r.onload = async e => {
       try {
-        const p = JSON.parse(e.target.result)
-        const src = p.data || p
-        ALL_KEYS.forEach(k => { if (src[k] !== undefined) localStorage.setItem(k, JSON.stringify(src[k])) })
+        const raw = JSON.parse(e.target.result)
+        const parsed = BackupSchema.parse(raw)
+        const src = parsed.data || parsed
+        
+        for (const k of ALL_KEYS) {
+          if (src[k] !== undefined) await set(k, src[k])
+        }
         resolve(true)
-      } catch { reject(new Error('File non valido')) }
+      } catch (err) { 
+        reject(new Error('File non valido o corrotto: ' + err.message)) 
+      }
     }
     r.onerror = () => reject(new Error('Errore lettura'))
     r.readAsText(file)
   })
 }
 
-export function resetSezione(key) {
+export async function resetSezione(key) {
   const s = SEZIONI[key]
-  if (s) localStorage.removeItem(s.key)
+  if (s) {
+    await del(s.key)
+    localStorage.removeItem(s.key)
+  }
 }
 
-export function resetTutto() {
-  ALL_KEYS.forEach(k => localStorage.removeItem(k))
+export async function resetTutto() {
+  for (const k of ALL_KEYS) {
+    await del(k)
+    localStorage.removeItem(k)
+  }
 }
 
-export function exportToCSV(key) {
-  const raw = localStorage.getItem(SEZIONI[key]?.key)
-  if (!raw) return
-  const data = JSON.parse(raw)
+export async function exportToCSV(key) {
+  const s = SEZIONI[key]
+  if (!s) return
+  const data = await get(s.key)
   if (!Array.isArray(data) || data.length === 0) return
 
   let csv = ''
   if (key === 'finanze') {
     csv = 'Data,Titolo,Categoria,Importo,Tipo\n'
-    csv += data.map(t => `${t.data},"${t.titolo}","${t.categoria}",${t.importo},${t.tipo}`).join('\n')
+    csv += data.map(t => `${t.data},"${t.desc||t.titolo}","${t.cat||t.categoria}",${t.importo},${t.tipo}`).join('\n')
   } else if (key === 'salute_sessioni') {
     csv = 'Data,Nome,Tipo,Durata(min),Note\n'
-    csv += data.map(s => `${s.data},"${s.nome}","${s.tipo}",${s.durata},"${s.note||''}"`).join('\n')
+    csv += data.map(s => `${s.data},"${s.nome}","${s.tipo}",${s.durata_min||s.durata},"${s.note||''}"`).join('\n')
   }
 
   if (!csv) return
