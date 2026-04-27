@@ -1,5 +1,5 @@
-import { formatCurrency, formatCurrencyDec, todayStr, formatShort, toDateStr } from '../utils/dateHelpers'
-import { ProgressBar, Badge, Dot, EmptyState } from './ui'
+import { formatCurrency, formatCurrencyDec, todayStr, formatShort, toDateStr } from '../../utils/dateHelpers'
+import { ProgressBar, Badge, Dot, EmptyState } from '../ui'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Radar, RadarChart, PolarGrid, PolarAngleAxis } from 'recharts'
 
 const STUDIO_COLOR = '#7A5FA0'
