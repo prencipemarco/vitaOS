@@ -33,7 +33,7 @@ export default function Calendario() {
 
   const {events,addEvent,removeEvent,eventsForDate,eventsForMonth,countFerie,countPermessi} = useCalendario()
   const {goals} = useRisparmi()
-  const {getOrarioGiorno,getOrarioStudio,getSchedulePalestra} = useImpostazioni()
+  const {getOrarioGiorno,getOrarioStudio,getScheduleStudio,getSchedulePalestra} = useImpostazioni()
   const {corsi,getTasksForCorso, generateAllSchedules} = useStudio()
   const {scheda:schedaSalute,sessioni:sessioniSalute} = useSalute()
 
@@ -116,9 +116,9 @@ export default function Calendario() {
   const handleRemove = (id) => showConfirm('Rimuovere questo evento?',()=>removeEvent(id))
   
   const handleRecalculateStudio = () => {
-    const r = generateAllSchedules(getOrarioStudio(), events)
+    const r = generateAllSchedules(getScheduleStudio(), events)
     if (r.error) showError(r.error)
-    else showSuccess(`Studio ricalcolato! ${r.corsiPianificati} corsi aggiornati sulle tue disponibilità.`)
+    else showSuccess(`Studio ricalcolato! ${r.corsiPianificati} corsi aggiornati.`)
   }
   const handleCellClick = d => {
     if (!d) return
