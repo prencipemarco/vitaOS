@@ -7,6 +7,7 @@ import { useImpostazioni } from '../hooks/useImpostazioni'
 import { useStudio, TIPI_CORSO } from '../hooks/useStudio'
 import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
 import { useHabits } from '../hooks/useHabits'
+import { useNotes } from '../hooks/useNotes'
 import { PageHeader, ProgressBar, Badge, Dot, EmptyState } from '../components/ui'
 import { formatCurrency, todayStr, formatShort, toDateStr } from '../utils/dateHelpers'
 
@@ -34,6 +35,10 @@ export default function Dashboard() {
   const { corsi, getStats, getTodayTasks, getLateTasksCount, completeTask } = useStudio()
   const { scheda: schedaSalute, getSessioneOggi, getStatsGenerali: getSaluteStats, startSessione } = useSalute()
   const { habits, toggleHabit, getTodayScore } = useHabits()
+  const { notes } = useNotes()
+
+  const recentNotes = notes.slice(0, 3)
+  const statsLavoro = { ore, stimato, rate }
 
   const today = todayStr()
   const todayCalEvents = eventsForDate(today)
@@ -129,7 +134,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:10, marginBottom:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:10, marginBottom:12 }}>
         {/* Unified agenda */}
         <div className="card card-5" style={{ display:'flex', flexDirection:'column' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
@@ -357,6 +362,52 @@ export default function Dashboard() {
               })}
             </div>
           )}
+        </div>
+
+        {/* Recent Notes */}
+        <div className="card">
+          <div className="label-xs" style={{ marginBottom:12 }}>note recenti</div>
+          {recentNotes.length === 0 ? (
+            <EmptyState message="Nessuna nota — vai in Note" />
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {recentNotes.map(n => (
+                <div key={n.id} style={{ padding:'9px 11px', background:'var(--sf2)', borderRadius:8, border:'1px solid var(--bd)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                    {n.fissata && <span style={{ fontSize:10 }}>📌</span>}
+                    <div style={{ fontSize:12, fontWeight:600, color:'var(--t1)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      {n.titolo}
+                    </div>
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--t3)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {n.contenuto || 'Nessun contenuto'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Work Summary */}
+        <div className="card">
+          <div className="label-xs" style={{ marginBottom:12 }}>riepilogo lavoro</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:13, color:'var(--t2)' }}>Ore questo mese</span>
+              <span style={{ fontSize:16, fontWeight:700, fontFamily:"'DM Mono',monospace" }}>{ore}h</span>
+            </div>
+            <ProgressBar value={ore} max={settings.oreContrattualiMensili || 160} color="var(--ac)" />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:4 }}>
+              <div style={{ padding:'8px', background:'var(--sf2)', borderRadius:7, textAlign:'center' }}>
+                <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>TARIFFA</div>
+                <div style={{ fontSize:12, fontWeight:600, fontFamily:"'DM Mono',monospace" }}>{formatCurrency(rate)}</div>
+              </div>
+              <div style={{ padding:'8px', background:'var(--sf2)', borderRadius:7, textAlign:'center' }}>
+                <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>STIMATO</div>
+                <div style={{ fontSize:12, fontWeight:600, fontFamily:"'DM Mono',monospace", color:'var(--go)' }}>{formatCurrency(stimato || 0)}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
