@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Responsive, WidthProvider } from 'react-grid-layout'
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy'
+import '/node_modules/react-grid-layout/css/styles.css'
+import '/node_modules/react-resizable/css/styles.css'
 import { useCalendario, TIPI_EVENTO } from '../hooks/useCalendario'
 import { useFinanze } from '../hooks/useFinanze'
 import { useRisparmi } from '../hooks/useRisparmi'
