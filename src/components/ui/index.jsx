@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 /* ─── StatCard ─── */
 export function StatCard({ label, value, sub, accent, style }) {
@@ -189,43 +190,44 @@ export function OnboardingModal({ sectionId, title, description, icon='✨' }) {
     setOpen(false)
   }
 
-  return (
+  return createPortal(
     <div style={{
-      position:'fixed', inset:0, zIndex:10000,
+      position:'fixed', inset:0, zIndex:100000,
       display:'flex', alignItems:'center', justifyContent:'center',
-      background:'rgba(0,0,0,.4)', backdropFilter:'blur(5px)',
+      background:'rgba(0,0,0,.4)', backdropFilter:'blur(8px)',
       animation:'fadeIn .3s ease'
     }}>
       <div style={{
-        background:'var(--sf)', border:'1px solid var(--bd2)', borderRadius:16,
-        padding:'32px', maxWidth:440, width:'90%',
-        boxShadow:'0 25px 70px rgba(0,0,0,.3)',
+        background:'var(--sf)', border:'1px solid var(--bd2)', borderRadius:20,
+        padding:'40px', maxWidth:480, width:'92%',
+        boxShadow:'0 30px 100px rgba(0,0,0,.4)',
         animation:'cardIn .4s cubic-bezier(.4,0,.2,1)',
         textAlign:'center'
       }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>{icon}</div>
-        <div style={{ fontSize:22, fontWeight:700, marginBottom:12, color:'var(--t1)' }}>{title}</div>
-        <div style={{ fontSize:14, color:'var(--t2)', lineHeight:1.6, marginBottom:24 }}>
+        <div style={{ fontSize:56, marginBottom:20 }}>{icon}</div>
+        <div style={{ fontSize:24, fontWeight:800, marginBottom:16, color:'var(--t1)', letterSpacing:'-.02em' }}>{title}</div>
+        <div style={{ fontSize:15, color:'var(--t2)', lineHeight:1.7, marginBottom:32 }}>
           {description}
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:16, alignItems:'center' }}>
-          <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:20, alignItems:'center' }}>
+          <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', userSelect:'none' }}>
             <input 
               type="checkbox" 
               checked={dontShowAgain} 
               onChange={e => setDontShowAgain(e.target.checked)} 
-              style={{ cursor:'pointer' }}
+              style={{ width:16, height:16, cursor:'pointer' }}
             />
-            <span style={{ fontSize:12, color:'var(--t3)' }}>Non mostrare più questo messaggio</span>
+            <span style={{ fontSize:13, color:'var(--t3)' }}>Non mostrare più questo messaggio</span>
           </label>
 
-          <button className="btn-accent" onClick={handleClose} style={{ width:'100%', padding:'12px', fontSize:14 }}>
+          <button className="btn-accent" onClick={handleClose} style={{ width:'100%', padding:'14px', fontSize:15, fontWeight:600 }}>
             Inizia a usare {title}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
