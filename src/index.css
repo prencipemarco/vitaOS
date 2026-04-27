@@ -161,3 +161,23 @@ select.input-field{
   border:1px solid transparent;
   animation:slideDown .22s ease both;
 }
+
+/* ── Skeleton ── */
+@keyframes shimmer {
+  0% { background-position: -468px 0 }
+  100% { background-position: 468px 0 }
+}
+.skeleton {
+  background: var(--sf2);
+  background-image: linear-gradient(to right, var(--sf2) 0%, var(--bd) 20%, var(--sf2) 40%, var(--sf2) 100%);
+  background-repeat: no-repeat;
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.dark .skeleton {
+  background: var(--sf2);
+  background-image: linear-gradient(to right, var(--sf2) 0%, rgba(255,255,255,.03) 20%, var(--sf2) 40%, var(--sf2) 100%);
+}

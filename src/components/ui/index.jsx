@@ -100,6 +100,44 @@ export function PageHeader({ label, title }) {
   )
 }
 
+/* ─── Skeleton ─── */
+export function Skeleton({ width, height, style }) {
+  return <div className="skeleton" style={{ width, height, ...style }} />
+}
+
+/* ─── SkeletonPage ─── */
+export function SkeletonPage() {
+  return (
+    <div style={{ padding:28, animation:'fadeIn .3s ease' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:24 }}>
+        <div>
+          <Skeleton width={60} height={10} style={{ marginBottom:8 }} />
+          <Skeleton width={200} height={28} />
+        </div>
+        <Skeleton width={120} height={32} />
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10, marginBottom:16 }}>
+        <Skeleton height={100} />
+        <Skeleton height={100} />
+        <Skeleton height={100} />
+        <Skeleton height={100} />
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:12, marginBottom:16 }}>
+        <Skeleton height={240} />
+        <Skeleton height={240} />
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:10 }}>
+        <Skeleton height={160} />
+        <Skeleton height={160} />
+        <Skeleton height={160} />
+      </div>
+    </div>
+  )
+}
+
 /* ─── MonthNav ─── */
 export function MonthNav({ year, month, onChange }) {
   const M = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic']

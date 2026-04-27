@@ -2,7 +2,7 @@ import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Sidebar from './components/layout/Sidebar'
 import { useImpostazioni } from './hooks/useImpostazioni'
-import { GlobalModal } from './components/ui'
+import { GlobalModal, SkeletonPage } from './components/ui'
 
 const Dashboard     = lazy(() => import('./pages/Dashboard'))
 const Calendario    = lazy(() => import('./pages/Calendario'))
@@ -16,14 +16,7 @@ const Note          = lazy(() => import('./pages/Note'))
 const Impostazioni  = lazy(() => import('./pages/Impostazioni'))
 
 function Loader() {
-  return (
-    <div style={{
-      display:'flex',alignItems:'center',justifyContent:'center',
-      height:'60vh',color:'var(--t3)',fontFamily:"'DM Mono',monospace",fontSize:13
-    }}>
-      caricamento...
-    </div>
-  )
+  return <SkeletonPage />
 }
 
 function AppInner() {
