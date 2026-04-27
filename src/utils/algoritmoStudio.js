@@ -37,6 +37,26 @@ function getSubSlots(scheduleGiorno) {
 }
 
 /**
+ * Chops a study slot based on an overlapping event interval.
+ * Returns array of new slots.
+ */
+function chopSlot(slot, eventStartMin, eventEndMin) {
+  const sStart = timeToMin(slot.dalle)
+  const sEnd = timeToMin(slot.alle)
+  
+  if (eventEndMin <= sStart || eventStartMin >= sEnd) return [slot]
+  
+  const result = []
+  if (sStart < eventStartMin) {
+    result.push({ ...slot, dalle: slot.dalle, alle: minToTime(eventStartMin), minuti: eventStartMin - sStart })
+  }
+  if (sEnd > eventEndMin) {
+    result.push({ ...slot, dalle: minToTime(eventEndMin), alle: slot.alle, minuti: sEnd - eventEndMin })
+  }
+  return result
+}
+
+/**
  * Generate all available study slots in a date range.
  * Each day can produce multiple sub-slots (morning + afternoon).
  */
@@ -56,16 +76,34 @@ export function generateStudySlots(startDate, endDate, scheduleStudio, calendarE
       const isBlocked = dayEvents.some(e => e.tipo === 'malattia' || e.tipo === 'ferie' || e.tipo === 'studio_eccezione')
 
       if (!isHoliday && !isBlocked) {
-        const subSlots = getSubSlots(g)
+        let subSlots = getSubSlots(g)
+        
+        // Sottrai gli impegni del giorno dalle fasce orarie di studio
+        dayEvents.forEach(e => {
+          if (e.ora) {
+            const evStart = timeToMin(e.ora)
+            // Se l'utente specifica un'ora di fine la usiamo, altrimenti calcoliamo un default:
+            // "permesso" -> e.ore * 60, altri -> default 2h (120m)
+            const fallbackDuration = e.tipo === 'permesso' && e.ore ? parseFloat(e.ore) * 60 : 120
+            const evEnd = e.oraFine ? timeToMin(e.oraFine) : evStart + fallbackDuration
+            
+            let chopped = []
+            subSlots.forEach(s => chopped.push(...chopSlot(s, evStart, evEnd)))
+            subSlots = chopped
+          }
+        })
+
         subSlots.forEach(ss => {
-          slots.push({
-            date: ds,
-            dalle: ss.dalle,
-            alle: ss.alle,
-            fascia: ss.fascia,
-            minutiDisponibili: ss.minuti,
-            usedMinutes: 0,
-          })
+          if (ss.minuti >= 20) { // Ignora i buchi minori di 20 minuti
+            slots.push({
+              date: ds,
+              dalle: ss.dalle,
+              alle: ss.alle,
+              fascia: ss.fascia,
+              minutiDisponibili: ss.minuti,
+              usedMinutes: 0,
+            })
+          }
         })
       }
     }

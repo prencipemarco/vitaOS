@@ -27,9 +27,9 @@ export default function Calendario() {
   const [year,setYear]   = useState(now.getFullYear())
   const [month,setMonth] = useState(now.getMonth())
   const [selected,setSelected] = useState(todayStr())
-  const [formOpen,setFormOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
   const [showPonti,setShowPonti] = useState(false)
-  const [form,setForm] = useState({titolo:'',data:todayStr(),ora:'',tipo:'lavoro',note:'',ore:'8'})
+  const [form, setForm] = useState({ titolo:'', data:todayStr(), ora:'', oraFine:'', tipo:'lavoro', note:'', ore:8 })
 
   const {events,addEvent,removeEvent,eventsForDate,eventsForMonth,countFerie,countPermessi} = useCalendario()
   const {goals} = useRisparmi()
@@ -308,12 +308,17 @@ export default function Calendario() {
             <FormPanel open={formOpen}>
               <input className="input-field" placeholder="Titolo evento" value={form.titolo}
                 onChange={e=>setForm(f=>({...f,titolo:e.target.value}))} />
-              <InputRow>
+              <div style={{ display:'flex', gap:7, alignItems:'center' }}>
                 <input className="input-field" type="date" value={form.data}
-                  onChange={e=>setForm(f=>({...f,data:e.target.value}))} />
-                <input className="input-field" type="time" value={form.ora}
-                  onChange={e=>setForm(f=>({...f,ora:e.target.value}))} style={{maxWidth:82}} />
-              </InputRow>
+                  onChange={e=>setForm(f=>({...f,data:e.target.value}))} style={{flex:1}} />
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <input className="input-field" type="time" value={form.ora}
+                    onChange={e=>setForm(f=>({...f,ora:e.target.value}))} style={{width:74, padding:'7px 4px', fontSize:11}} title="Ora inizio" />
+                  <span style={{color:'var(--t3)', fontSize:10}}>→</span>
+                  <input className="input-field" type="time" value={form.oraFine||''}
+                    onChange={e=>setForm(f=>({...f,oraFine:e.target.value}))} style={{width:74, padding:'7px 4px', fontSize:11}} title="Ora fine (opzionale)" />
+                </div>
+              </div>
               <select className="input-field" value={form.tipo}
                 onChange={e=>setForm(f=>({...f,tipo:e.target.value}))}>
                 {Object.entries(TIPI_EVENTO).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
@@ -346,7 +351,12 @@ export default function Calendario() {
                       <div>
                         <div style={{fontSize:13,fontWeight:500}}>{item.titolo}</div>
                         <div style={{display:'flex',gap:5,marginTop:3,flexWrap:'wrap',alignItems:'center'}}>
-                          {(item.ora||item.oraPianificata)&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:'var(--t3)'}}>{item.ora||item.oraPianificata}</span>}
+                          {(item.ora||item.oraPianificata)&&(
+                            <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:'var(--t3)'}}>
+                              {item.ora||item.oraPianificata}
+                              {item.oraFine ? ` - ${item.oraFine}` : ''}
+                            </span>
+                          )}
                           <Badge color={color}>{badge}</Badge>
                           {item.tipo==='permesso'&&item.ore&&<span style={{fontSize:10,color:'var(--t3)'}}>{item.ore}h</span>}
                           {isStudy&&<span style={{fontSize:10,color:'var(--t3)'}}>{item.durata_minuti}min</span>}
