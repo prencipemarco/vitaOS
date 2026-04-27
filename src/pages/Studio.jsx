@@ -4,7 +4,7 @@ import { useStudio, TIPI_CORSO, TIPI_TASK } from '../hooks/useStudio'
 import { useImpostazioni } from '../hooks/useImpostazioni'
 import { useCalendario } from '../hooks/useCalendario'
 import { buildPromptMaestro, validateCorsoJSON, callAI } from '../utils/promptMaestro'
-import { PageHeader, Badge, EmptyState, ProgressBar, SectionHeader, FormPanel, InputRow, showError, showConfirm, showSuccess } from '../components/ui'
+import { PageHeader, Badge, EmptyState, ProgressBar, SectionHeader, FormPanel, InputRow, showError, showConfirm, showSuccess, OnboardingModal } from '../components/ui'
 import { formatShort } from '../utils/dateHelpers'
 
 // ── Color maps ──────────────────────────────────────────────
@@ -336,6 +336,12 @@ export default function Studio() {
 
   return (
     <div style={{ padding:28, animation:'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="studio"
+        title="Gestione Studio"
+        icon="🎓"
+        description="Pianifica il tuo percorso di studio. Aggiungi i corsi, carica i task e monitora il progresso verso l'esame. Il sistema calcola automaticamente la tua velocità di studio e ti avvisa se sei in ritardo rispetto alla scadenza prefissata."
+      />
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:20 }}>
         <PageHeader label="studio" title="Smart Study Planner" />
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>

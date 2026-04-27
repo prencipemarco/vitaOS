@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { useRisparmi } from '../hooks/useRisparmi'
 import { useFinanze } from '../hooks/useFinanze'
 import { useImpostazioni } from '../hooks/useImpostazioni'
-import { PageHeader, SectionHeader, FormPanel, InputRow, ProgressBar, Badge, EmptyState, showError, showConfirm, showSuccess } from '../components/ui'
+import { PageHeader, SectionHeader, FormPanel, InputRow, ProgressBar, Badge, EmptyState, showError, showConfirm, showSuccess, OnboardingModal } from '../components/ui'
 import { formatCurrency, todayStr } from '../utils/dateHelpers'
 import { mesiAlTraguardo, MAX_SAVINGS_RATIO } from '../utils/algoritmoRisparmi'
 
@@ -193,6 +193,12 @@ export default function Risparmi() {
 
   return (
     <div style={{ padding:28, animation:'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="risparmi"
+        title="Gestione Patrimonio"
+        icon="🏦"
+        description="Qui puoi gestire i tuoi risparmi e visualizzare la crescita del tuo patrimonio nel tempo. Crea 'Obiettivi Vincolati' per scopi specifici o usa il 'Salvadanaio Libero' per la tua liquidità. Prova il simulatore di investimento per vedere l'effetto degli interessi composti."
+      />
       <PageHeader label="risparmi" title="Gestione Patrimonio" />
 
       {/* KPI */}

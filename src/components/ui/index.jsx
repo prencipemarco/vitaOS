@@ -166,6 +166,69 @@ export function showSuccess(message) {
   if (_showModal) _showModal({ type:'success', message })
 }
 
+/* ─── Onboarding Modal ─── */
+export function OnboardingModal({ sectionId, title, description, icon='✨' }) {
+  const [open, setOpen] = useState(false)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+
+  useEffect(() => {
+    const seen = JSON.parse(localStorage.getItem('wl_seen_onboarding') || '{}')
+    if (!seen[sectionId]) {
+      setOpen(true)
+    }
+  }, [sectionId])
+
+  if (!open) return null
+
+  const handleClose = () => {
+    if (dontShowAgain) {
+      const seen = JSON.parse(localStorage.getItem('wl_seen_onboarding') || '{}')
+      seen[sectionId] = true
+      localStorage.setItem('wl_seen_onboarding', JSON.stringify(seen))
+    }
+    setOpen(false)
+  }
+
+  return (
+    <div style={{
+      position:'fixed', inset:0, zIndex:10000,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      background:'rgba(0,0,0,.4)', backdropFilter:'blur(5px)',
+      animation:'fadeIn .3s ease'
+    }}>
+      <div style={{
+        background:'var(--sf)', border:'1px solid var(--bd2)', borderRadius:16,
+        padding:'32px', maxWidth:440, width:'90%',
+        boxShadow:'0 25px 70px rgba(0,0,0,.3)',
+        animation:'cardIn .4s cubic-bezier(.4,0,.2,1)',
+        textAlign:'center'
+      }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>{icon}</div>
+        <div style={{ fontSize:22, fontWeight:700, marginBottom:12, color:'var(--t1)' }}>{title}</div>
+        <div style={{ fontSize:14, color:'var(--t2)', lineHeight:1.6, marginBottom:24 }}>
+          {description}
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:16, alignItems:'center' }}>
+          <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none' }}>
+            <input 
+              type="checkbox" 
+              checked={dontShowAgain} 
+              onChange={e => setDontShowAgain(e.target.checked)} 
+              style={{ cursor:'pointer' }}
+            />
+            <span style={{ fontSize:12, color:'var(--t3)' }}>Non mostrare più questo messaggio</span>
+          </label>
+
+          <button className="btn-accent" onClick={handleClose} style={{ width:'100%', padding:'12px', fontSize:14 }}>
+            Inizia a usare {title}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function GlobalModal() {
   const [state, setState] = useState(null)
 

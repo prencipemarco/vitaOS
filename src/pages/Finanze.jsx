@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useFinanze, CATEGORIE_USCITE, CATEGORIE_ENTRATE } from '../hooks/useFinanze'
-import { PageHeader, Grid, SectionHeader, FormPanel, InputRow, Dot, MonthNav, EmptyState, showError, showConfirm, showSuccess } from '../components/ui'
+import { PageHeader, Grid, SectionHeader, FormPanel, InputRow, Dot, MonthNav, EmptyState, showError, showConfirm, showSuccess, OnboardingModal } from '../components/ui'
 import { formatCurrency, formatCurrencyDec, formatShort } from '../utils/dateHelpers'
 
 const COLORS = ['#C46A3C','#3A5F8A','#3A7059','#7A5FA0','#B07040','#A04545','#5A8A6A','#888']
@@ -86,6 +86,12 @@ export default function Finanze() {
 
   return (
     <div style={{ padding:28,animation:'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="finanze"
+        title="Gestione Finanze"
+        icon="💰"
+        description="Qui puoi tracciare entrate e uscite. Inserisci le 'Transazioni' per registrare movimenti reali, e usa le 'Transazioni Previste' per pianificare spese fisse o entrate future. Il saldo disponibile calcola quanto puoi spendere in sicurezza."
+      />
       <div style={{ display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:20 }}>
         <PageHeader label="finanze" title="Gestione Economica" />
         <div style={{ display:'flex',alignItems:'center',gap:12,paddingBottom:2 }}>

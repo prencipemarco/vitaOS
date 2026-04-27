@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useSalute, TIPI_GIORNO, MUSCOLI, EARTH_CIRCUMFERENCE_KM, calcPace, calcSpeed, formatDurata } from '../hooks/useSalute'
 import { useImpostazioni } from '../hooks/useImpostazioni'
-import { PageHeader, Badge, EmptyState, ProgressBar, SectionHeader, InputRow, showConfirm, showSuccess, showError } from '../components/ui'
+import { PageHeader, Badge, EmptyState, ProgressBar, SectionHeader, InputRow, showConfirm, showSuccess, showError, OnboardingModal } from '../components/ui'
 import { formatShort } from '../utils/dateHelpers'
 
 const GYM_COLOR  = '#3A7059'
@@ -397,6 +397,12 @@ export default function Salute() {
 
   return (
     <div style={{padding:28,animation:'fadeUp .24s ease both'}}>
+      <OnboardingModal 
+        sectionId="salute"
+        title="Salute & Fitness"
+        icon="💪"
+        description="Gestisci la tua scheda di allenamento e monitora i tuoi progressi fisici. Registra le sessioni completate per mantenere la tua streak e visualizza le statistiche mensili per restare motivato verso i tuoi obiettivi di benessere."
+      />
       <PageHeader label="salute & fitness" title="Allenamento & Corsa" />
 
       {/* KPI */}

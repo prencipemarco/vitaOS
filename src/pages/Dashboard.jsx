@@ -8,7 +8,7 @@ import { useStudio, TIPI_CORSO } from '../hooks/useStudio'
 import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
 import { useHabits } from '../hooks/useHabits'
 import { useNotes } from '../hooks/useNotes'
-import { PageHeader, ProgressBar, Badge, Dot, EmptyState } from '../components/ui'
+import { PageHeader, ProgressBar, Badge, Dot, EmptyState, OnboardingModal } from '../components/ui'
 import { formatCurrency, todayStr, formatShort, toDateStr } from '../utils/dateHelpers'
 
 const STUDIO_COLOR = '#7A5FA0'
@@ -98,6 +98,12 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding:28, animation:'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="dashboard"
+        title="Dashboard Overview"
+        icon="🚀"
+        description="Benvenuto nel centro di controllo di vitaOS. Qui puoi monitorare il tuo saldo, le ore lavorate, i tuoi obiettivi di risparmio e l'agenda del giorno. Usa il radar per bilanciare i diversi aspetti della tua vita."
+      />
       <PageHeader label="dashboard" title={dateLabel.charAt(0).toUpperCase()+dateLabel.slice(1)} />
 
       {!isConfigured && (

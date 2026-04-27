@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useFirme } from '../hooks/useFirme'
 import { useImpostazioni } from '../hooks/useImpostazioni'
-import { PageHeader, Grid, SectionHeader, InputRow, MonthNav, EmptyState, showError, showSuccess, showConfirm } from '../components/ui'
+import { PageHeader, Grid, SectionHeader, InputRow, MonthNav, EmptyState, showError, showSuccess, showConfirm, OnboardingModal } from '../components/ui'
 import { formatCurrency, formatDate } from '../utils/dateHelpers'
 
 const Tip = ({ active, payload, label }) => !active||!payload?.length?null:(
@@ -87,6 +87,12 @@ export default function FoglioDiFirme() {
 
   return (
     <div style={{ padding:28, animation:'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="firme"
+        title="Foglio Firme"
+        icon="✒️"
+        description="Traccia le tue ore lavorative in modo preciso. Inserisci gli ingressi e le uscite per calcolare automaticamente il tempo lavorato e confrontarlo con i tuoi obiettivi contrattuali impostati nel profilo."
+      />
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:20 }}>
         <PageHeader label="foglio firme" title="Time Tracking" />
         <MonthNav year={year} month={month} onChange={(y,m)=>{ setYear(y); setMonth(m) }} />

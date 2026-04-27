@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNotes } from '../hooks/useNotes'
-import { PageHeader, EmptyState, SectionHeader, showConfirm } from '../components/ui'
+import { PageHeader, EmptyState, SectionHeader, showConfirm, OnboardingModal } from '../components/ui'
 
 export default function Note() {
   const { notes, addNote, updateNote, removeNote, togglePin } = useNotes()
@@ -30,6 +30,12 @@ export default function Note() {
 
   return (
     <div style={{ padding: 28, height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', animation: 'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="note"
+        title="Second Brain (Note)"
+        icon="📓"
+        description="Un posto sicuro per i tuoi pensieri e progetti. Usa il Markdown per formattare le tue note e fissale in alto per averle sempre a portata di mano nella Dashboard."
+      />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <PageHeader label="second brain" title="Note & Progetti" />
         <button className="btn-accent" onClick={handleNew}>+ Nuova Nota</button>

@@ -181,3 +181,12 @@ select.input-field{
   background: var(--sf2);
   background-image: linear-gradient(to right, var(--sf2) 0%, rgba(255,255,255,.03) 20%, var(--sf2) 40%, var(--sf2) 100%);
 }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

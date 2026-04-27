@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useHabits } from '../hooks/useHabits'
-import { PageHeader, EmptyState, SectionHeader, showConfirm, showSuccess } from '../components/ui'
+import { PageHeader, EmptyState, SectionHeader, showConfirm, showSuccess, OnboardingModal } from '../components/ui'
 import { toDateStr } from '../utils/dateHelpers'
 
 const COLORS = ['#E67E22', '#3498DB', '#2ECC71', '#9B59B6', '#F1C40F', '#E74C3C', '#1ABC9C']
@@ -30,6 +30,12 @@ export default function Abitudini() {
 
   return (
     <div style={{ padding: 28, animation: 'fadeUp .24s ease both' }}>
+      <OnboardingModal 
+        sectionId="abitudini"
+        title="Habit Tracker"
+        icon="✅"
+        description="Costruisci routine positive. Aggiungi le abitudini che vuoi consolidare e segna il progresso ogni giorno. La coerenza è la chiave per il cambiamento a lungo termine."
+      />
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
         <PageHeader label="consistenza quotidiana" title="Abitudini" />
         <div style={{ textAlign: 'right' }}>

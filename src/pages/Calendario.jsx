@@ -6,7 +6,7 @@ import { useStudio } from '../hooks/useStudio'
 import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
 import { getFestivita, getPonti, isFestivita, getFestivitaNome } from '../utils/festivita'
 import { buildCalendarGrid, MESI, GIORNI_BREVI, todayStr, formatShort } from '../utils/dateHelpers'
-import { PageHeader, SectionHeader, FormPanel, InputRow, Badge, EmptyState, showConfirm } from '../components/ui'
+import { PageHeader, SectionHeader, FormPanel, InputRow, Badge, EmptyState, showConfirm, OnboardingModal } from '../components/ui'
 
 const STUDIO_COLOR = '#7A5FA0'
 const GYM_COLOR    = '#3A7059'
@@ -125,6 +125,12 @@ export default function Calendario() {
 
   return (
     <div style={{padding:'20px 28px',animation:'fadeUp .24s ease both'}}>
+      <OnboardingModal 
+        sectionId="calendario"
+        title="Calendario Intelligente"
+        icon="📅"
+        description="Qui puoi visualizzare tutti i tuoi impegni. Il sistema integra automaticamente i tuoi orari di lavoro, di studio e gli allenamenti in palestra, mostrandoti anche le scadenze degli obiettivi di risparmio e i ponti festivi."
+      />
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
