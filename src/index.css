@@ -181,3 +181,27 @@ select.input-field{
   background: var(--sf2);
   background-image: linear-gradient(to right, var(--sf2) 0%, rgba(255,255,255,.03) 20%, var(--sf2) 40%, var(--sf2) 100%);
 }
+
+/* ── React Grid Layout ── */
+.react-grid-layout { position: relative; transition: height 200ms ease; }
+.react-grid-item { transition: all 200ms ease; transition-property: left, top, width, height; }
+.react-grid-item.cssTransforms { transition-property: transform, width, height; }
+.react-grid-item.resizing { z-index: 1; will-change: width, height; }
+.react-grid-item.react-draggable-dragging { transition: none; z-index: 3; will-change: transform; }
+.react-grid-item.dropping { visibility: hidden; }
+.react-grid-placeholder { background: rgba(196,106,60,0.1); border: 2px dashed var(--ac); border-radius: 12px; margin: 0; z-index: 2; transition: all 0.2s ease; }
+.react-resizable-handle { position: absolute; width: 20px; height: 20px; bottom: 0; right: 0; cursor: se-resize; }
+.react-resizable-handle::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 6px; height: 6px; border-right: 2px solid var(--t3); border-bottom: 2px solid var(--t3); }
+
+.widget-card { height: 100%; display: flex; flexDirection: column; overflow: hidden; position: relative; }
+.widget-drag-handle { cursor: grab; padding: 4px; margin: -4px; }
+.widget-drag-handle:active { cursor: grabbing; }
+
+.edit-mode-active { 
+  background-image: radial-gradient(var(--bd2) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border-radius: 12px;
+}
+.edit-mode-active .card { border-style: dashed; border-color: var(--ac); opacity: 0.9; }
+.widget-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; z-index: 10; }
+.card:hover .widget-actions { opacity: 1; }
