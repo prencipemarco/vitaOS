@@ -76,8 +76,9 @@ export function generateStudySlots(startDate, endDate, scheduleStudio, calendarE
 
 /**
  * Schedule tasks for one course into available slots.
+ * @param {string} mode "compresso" (densely packed) or "bilanciato" (evenly spread)
  */
-export function scheduleTasks(moduli, slots) {
+export function scheduleTasks(moduli, slots, mode = 'compresso') {
   if (!slots.length || !moduli.length) return []
   const allTasks = []
   ;[...moduli].sort((a,b) => a.ordine-b.ordine).forEach(m => {
@@ -85,9 +86,56 @@ export function scheduleTasks(moduli, slots) {
   })
 
   const slotsWork = slots.map(s => ({ ...s }))
-  let si = 0, usedInSlot = 0
   const scheduled = []
+  
+  if (mode === 'bilanciato') {
+    const totalMinutes = allTasks.reduce((s,t) => s + (t.durata_minuti||50), 0)
+    const availableMinutes = slots.reduce((s,sl) => s + sl.minutiDisponibili, 0)
+    // Se non c'è abbastanza tempo, si comporta come compresso
+    if (totalMinutes >= availableMinutes) {
+      mode = 'compresso'
+    } else {
+      // Spalmiamo in base al rapporto
+      const ratio = totalMinutes / availableMinutes
+      let currentTaskIdx = 0
+      
+      for (let i = 0; i < slotsWork.length && currentTaskIdx < allTasks.length; i++) {
+        const slot = slotsWork[i]
+        const targetMinutesForSlot = slot.minutiDisponibili * ratio
+        let usedInSlot = 0
+        
+        while (currentTaskIdx < allTasks.length) {
+          const task = allTasks[currentTaskIdx]
+          const needed = task.durata_minuti || 50
+          
+          // Se aggiungendo questo task superiamo il target giornaliero in modo significativo, passiamo al prossimo slot
+          // a meno che il task non sia il primo di questo slot (per evitare di bloccarci all'infinito)
+          if (usedInSlot > 0 && (usedInSlot + needed > targetMinutesForSlot * 1.5)) {
+            break // Passa al prossimo slot
+          }
+          
+          if (usedInSlot + needed <= slot.minutiDisponibili) {
+            const startMin = timeToMin(slot.dalle) + usedInSlot
+            scheduled.push({ ...task, dataPianificata: slot.date, oraPianificata: minToTime(startMin), fascia: slot.fascia })
+            usedInSlot += needed
+            currentTaskIdx++
+          } else {
+            break // Slot pieno fisicamente
+          }
+        }
+      }
+      
+      // I task rimanenti (se l'approssimazione ha lasciato task fuori) vanno compressi alla fine
+      while (currentTaskIdx < allTasks.length) {
+        scheduled.push({ ...allTasks[currentTaskIdx], dataPianificata: null, oraPianificata: null })
+        currentTaskIdx++
+      }
+      return scheduled
+    }
+  }
 
+  // Modalità Compressa (Originale)
+  let si = 0, usedInSlot = 0
   for (const task of allTasks) {
     const needed = task.durata_minuti || 50
     while (si < slotsWork.length && (slotsWork[si].minutiDisponibili - usedInSlot) < 20) {

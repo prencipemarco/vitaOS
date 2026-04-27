@@ -62,19 +62,30 @@ export function useStudio() {
   }
 
   // ── Single course scheduling ───────────────────────────────
-  const generateSchedule = (corsoId, scheduleStudio, calendarEvents = []) => {
+  const generateSchedule = (corsoId, scheduleStudio, calendarEvents = [], config = {}) => {
     const corso = corsi.find(c => c.id === corsoId)
     if (!corso || !corso.dataEsame) return { error: 'Data esame non impostata' }
-    const today = new Date().toISOString().slice(0, 10)
+    
+    const mode = config.modalita || 'compresso'
+    const todayStr = new Date().toISOString().slice(0, 10)
+    let startDate = config.dataInizio || todayStr
+    
+    // Assicuriamoci che la data d'inizio non sia nel passato
+    if (startDate < todayStr) startDate = todayStr
+    
     const bufferDate = (() => {
       const d = new Date(corso.dataEsame + 'T12:00'); d.setDate(d.getDate() - 2)
       return d.toISOString().slice(0, 10)
     })()
-    if (bufferDate < today) return { error: "La data dell'esame è già passata o troppo vicina" }
-    const slots = generateStudySlots(today, bufferDate, scheduleStudio, calendarEvents)
+    
+    if (bufferDate < startDate) return { error: "La data dell'esame è passata o troppo vicina all'inizio" }
+    
+    const slots = generateStudySlots(startDate, bufferDate, scheduleStudio, calendarEvents)
     if (!slots.length) return { error: 'Nessuno slot di studio disponibile. Verifica la configurazione orario studio.' }
-    const scheduled = scheduleTasks(corso.moduli || [], slots)
+    
+    const scheduled = scheduleTasks(corso.moduli || [], slots, mode)
     setTasksForCorso(corsoId, scheduled.map(t => ({ ...t, completato: false })))
+    
     const totalNeeded = scheduled.reduce((s, t) => s + (t.durata_minuti || 50), 0)
     const totalAvail = slots.reduce((s, sl) => s + sl.minutiDisponibili, 0)
     return { success: true, slotsCount: slots.length, oreDisponibili: Math.round(totalAvail/60), oreNecessarie: Math.round(totalNeeded/60), fattibile: totalAvail >= totalNeeded }

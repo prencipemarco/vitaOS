@@ -267,6 +267,7 @@ export default function Studio() {
   const [addSubMode, setAddSubMode] = useState('ai')
   const [scheduleResult, setScheduleResult] = useState(null)
   const [globalLoading, setGlobalLoading] = useState(false)
+  const [scheduleConfig, setScheduleConfig] = useState(null)
 
   const todayPending = getTodayTasks()
   const todayDone = getTodayTasksCompleted()
@@ -288,8 +289,14 @@ export default function Studio() {
 
   const handleScheduleSingle = () => {
     if (!selectedId) return
-    const r = generateSchedule(selectedId, getScheduleStudio(), events)
+    const todayStr = new Date().toISOString().slice(0, 10)
+    setScheduleConfig({ corsoId: selectedId, dataInizio: todayStr, modalita: 'bilanciato' })
+  }
+
+  const confirmSchedule = () => {
+    const r = generateSchedule(scheduleConfig.corsoId, getScheduleStudio(), events, scheduleConfig)
     setScheduleResult(r)
+    setScheduleConfig(null)
     if (r.error) showError(r.error)
     else {
       showSuccess(`Pianificazione completata! ${r.slotsCount} sessioni · ${r.oreDisponibili}h disponibili${!r.fattibile ? ' ⚠ ore insufficienti' : ''}`)
@@ -719,6 +726,34 @@ export default function Studio() {
               )}
             </div>
           )}
+        </div>
+      )}
+      {/* ── MODAL SCHEDULER ── */}
+      {scheduleConfig && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center', padding:20, backdropFilter:'blur(4px)' }}>
+          <div className="card" style={{ width:'100%', maxWidth:380, animation:'slideUp .2s ease', boxShadow:'0 10px 40px rgba(0,0,0,0.1)' }}>
+            <div style={{ fontSize:16, fontWeight:700, marginBottom:16 }}>Configura Pianificazione</div>
+            
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, color:'var(--t2)', marginBottom:4 }}>Data di inizio studio</div>
+              <input type="date" className="input-field" value={scheduleConfig.dataInizio} 
+                onChange={e => setScheduleConfig(p => ({...p, dataInizio:e.target.value}))} />
+            </div>
+
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:'var(--t2)', marginBottom:4 }}>Modalità di spalmatura</div>
+              <select className="input-field" value={scheduleConfig.modalita} 
+                onChange={e => setScheduleConfig(p => ({...p, modalita:e.target.value}))}>
+                <option value="bilanciato">Bilanciata (costante fino all'esame)</option>
+                <option value="compresso">Compressa (il prima possibile)</option>
+              </select>
+            </div>
+
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button className="btn-ghost" onClick={() => setScheduleConfig(null)}>Annulla</button>
+              <button className="btn-accent" onClick={confirmSchedule}>⚡ Genera Piano</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
