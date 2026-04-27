@@ -38,7 +38,22 @@ export default function Finanze() {
   const [prevForm, setPrevForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',ricorrente:false,mese:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}` })
 
   const { transazioni,addTransazione,removeTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,
-    getSaldoDisponibile,previste,addPrevista,removePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
+    getSaldoDisponibile,previste,addPrevista,removePrevista,updatePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
+
+  const [editingPrevId, setEditingPrevId] = useState(null)
+  const [editPrevForm, setEditPrevForm] = useState(null)
+
+  const handleEditPrev = (p) => {
+    setEditingPrevId(p.id)
+    setEditPrevForm({ ...p })
+  }
+
+  const handleSaveEditPrev = () => {
+    updatePrevista(editingPrevId, editPrevForm)
+    setEditingPrevId(null)
+    setEditPrevForm(null)
+    showSuccess('Previsione aggiornata.')
+  }
 
   const fin = riepilogo(year, month)
   const catData = perCategoria(year, month)
@@ -252,28 +267,56 @@ export default function Finanze() {
           </TxFormBox>
           <div style={{ maxHeight:340,overflowY:'auto',marginTop:prevOpen?8:0 }}>
             {monthPrev.length===0&&!prevOpen?<EmptyState message="Nessuna transazione prevista" />
-            :monthPrev.map(p=>(
-              <div key={p.id} className="row-item">
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13,fontWeight:500 }}>{p.desc}</div>
-                  <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace" }}>{p.cat}{p.ricorrente?' · ricorrente':''}</div>
+            :monthPrev.map(p=>{
+              const isEditing = editingPrevId === p.id
+              const editCats = editPrevForm?.tipo === 'uscita' ? CATEGORIE_USCITE : CATEGORIE_ENTRATE
+
+              if (isEditing) return (
+                <div key={p.id} className="row-item" style={{ flexDirection:'column', alignItems:'stretch', gap:8, background:'var(--ac-bg)', borderRadius:8, padding:10 }}>
+                  <InputRow>
+                    <input className="input-field" value={editPrevForm.desc} onChange={e=>setEditPrevForm({...editPrevForm, desc:e.target.value})} />
+                    <input className="input-field" type="number" value={editPrevForm.importo} onChange={e=>setEditPrevForm({...editPrevForm, importo:e.target.value})} style={{ maxWidth:80 }} />
+                  </InputRow>
+                  <InputRow>
+                    <select className="input-field" value={editPrevForm.cat} onChange={e=>setEditPrevForm({...editPrevForm, cat:e.target.value})}>
+                      {editCats.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button className="btn-ghost" onClick={() => setEditingPrevId(null)}>Annulla</button>
+                      <button className="btn-accent" onClick={handleSaveEditPrev}>Salva</button>
+                    </div>
+                  </InputRow>
                 </div>
-                <span style={{ fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,marginRight:8,color:p.tipo==='entrata'?'var(--go)':'var(--rd)' }}>
-                  {p.tipo==='entrata'?'+':'-'}{formatCurrency(p.importo)}
-                </span>
-                <div style={{ display:'flex', gap:6 }}>
-                  <button className="btn-ghost" 
-                    style={{ padding:'4px 7px', borderColor:'var(--go)', color:'var(--go)', fontSize:11 }}
-                    onClick={() => {
-                      confirmPrevista(p.id)
-                      showSuccess(`Confermata: ${p.desc}`)
-                    }}>
-                    ✓
-                  </button>
-                  <button className="btn-danger" onClick={()=>handleRemovePrev(p)}>✕</button>
+              )
+
+              return (
+                <div key={p.id} className="row-item">
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13,fontWeight:500 }}>{p.desc}</div>
+                    <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace" }}>{p.cat}{p.ricorrente?' · ricorrente':''}</div>
+                  </div>
+                  <span style={{ fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,marginRight:8,color:p.tipo==='entrata'?'var(--go)':'var(--rd)' }}>
+                    {p.tipo==='entrata'?'+':'-'}{formatCurrency(p.importo)}
+                  </span>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button className="btn-ghost" title="Modifica"
+                      style={{ padding:'4px 7px', fontSize:11, opacity:0.7 }}
+                      onClick={() => handleEditPrev(p)}>
+                      ⚙️
+                    </button>
+                    <button className="btn-ghost" title="Conferma come transazione effettiva"
+                      style={{ padding:'4px 7px', borderColor:'var(--go)', color:'var(--go)', fontSize:11 }}
+                      onClick={() => {
+                        confirmPrevista(p.id)
+                        showSuccess(`Confermata: ${p.desc}`)
+                      }}>
+                      ✓
+                    </button>
+                    <button className="btn-danger" onClick={()=>handleRemovePrev(p)}>✕</button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

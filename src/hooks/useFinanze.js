@@ -60,6 +60,9 @@ export function useFinanze() {
     return id
   }
   const removePrevista = (id) => setPreviste(prev => prev.filter(t=>t.id!==id))
+  const updatePrevista = (id, patch) => {
+    setPreviste(prev => prev.map(p => p.id === id ? { ...p, ...patch, importo: patch.importo !== undefined ? parseFloat(patch.importo) : p.importo } : p))
+  }
   
   const confirmPrevista = (id, dataEffettiva) => {
     const p = previste.find(x => x.id === id)
@@ -92,6 +95,6 @@ export function useFinanze() {
     transazioni, addTransazione, removeTransazione,
     getSaldoDisponibile,
     forMonth, riepilogo, perCategoria, andamentoMesi,
-    previste, addPrevista, removePrevista, confirmPrevista, previsteDelMese, totalePrevisteMese,
+    previste, addPrevista, removePrevista, updatePrevista, confirmPrevista, previsteDelMese, totalePrevisteMese,
   }
 }
