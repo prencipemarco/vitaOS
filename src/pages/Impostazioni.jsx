@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useImpostazioni } from '../hooks/useImpostazioni'
 import { exportBackup, importBackup, resetSezione, resetTutto, SEZIONI, exportToCSV } from '../utils/backupManager'
 import { formatCurrency } from '../utils/dateHelpers'
@@ -64,12 +64,19 @@ export default function Impostazioni() {
   const {
     settings, saveSettings,
     oreContrattualiMensili, oreStudioSettimanali, orePalestraSettimanali,
-    tariffaCalcolata, reddtitoMedioMensile,
+    tariffaCalcolata, reddtitoMedioMensile, isReady,
   } = useImpostazioni()
 
   const [tab, setTab] = useState('config')
   const [draft, setDraft] = useState(settings)
   const [isDirty, setIsDirty] = useState(false)
+
+  // Sincronizza il draft con i settings quando il database ha finito di caricare
+  useEffect(() => {
+    if (isReady && !isDirty) {
+      setDraft(settings)
+    }
+  }, [settings, isReady, isDirty])
 
   const handleUpdate = (key, val) => {
     setDraft(prev => ({ ...prev, [key]: val }))

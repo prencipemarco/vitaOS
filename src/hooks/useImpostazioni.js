@@ -79,7 +79,7 @@ function subMinFromTime(t, min) {
 }
 
 export function useImpostazioni() {
-  const [settings, setSettings] = useLocalStorage('wl_settings', DEFAULT_SETTINGS)
+  const [settings, setSettings, isReady] = useLocalStorage('wl_settings', DEFAULT_SETTINGS)
 
   const update = (key, val) => setSettings(s => ({ ...s, [key]: val }))
 
@@ -204,7 +204,7 @@ export function useImpostazioni() {
   }
 
   return {
-    settings, update, saveSettings: setSettings,
+    settings, update, saveSettings: setSettings, isReady,
     updateScheduleGiorno, updateStudioGiorno, updateStudioSlot, updatePalestraGiorno,
     getSchedule, getScheduleStudio, getSchedulePalestra,
     getOrarioGiorno, getOrarioStudio, getOrarioPalestra, getPalestraBlockGiorno,
