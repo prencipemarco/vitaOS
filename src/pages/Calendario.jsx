@@ -6,7 +6,7 @@ import { useStudio } from '../hooks/useStudio'
 import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
 import { getFestivita, getPonti, isFestivita, getFestivitaNome } from '../utils/festivita'
 import { buildCalendarGrid, MESI, GIORNI_BREVI, todayStr, formatShort } from '../utils/dateHelpers'
-import { PageHeader, SectionHeader, FormPanel, InputRow, Badge, EmptyState, showConfirm, OnboardingModal } from '../components/ui'
+import { PageHeader, SectionHeader, FormPanel, InputRow, Badge, EmptyState, showConfirm, showSuccess, showError, OnboardingModal } from '../components/ui'
 
 const STUDIO_COLOR = '#7A5FA0'
 const GYM_COLOR    = '#3A7059'
@@ -34,7 +34,7 @@ export default function Calendario() {
   const {events,addEvent,removeEvent,eventsForDate,eventsForMonth,countFerie,countPermessi} = useCalendario()
   const {goals} = useRisparmi()
   const {getOrarioGiorno,getOrarioStudio,getSchedulePalestra} = useImpostazioni()
-  const {corsi,getTasksForCorso} = useStudio()
+  const {corsi,getTasksForCorso, generateAllSchedules} = useStudio()
   const {scheda:schedaSalute,sessioni:sessioniSalute} = useSalute()
 
   const festivita  = getFestivita(year)
@@ -110,10 +110,16 @@ export default function Calendario() {
   const handleAdd = () => {
     if (!form.titolo.trim()||!form.data) return
     addEvent({...form})
-    setForm({titolo:'',data:selected||today,ora:'',tipo:'lavoro',note:'',ore:'8'})
+    setForm({titolo:'',data:selected||today,ora:'',oraFine:'',tipo:'lavoro',note:'',ore:8})
     setFormOpen(false)
   }
   const handleRemove = (id) => showConfirm('Rimuovere questo evento?',()=>removeEvent(id))
+  
+  const handleRecalculateStudio = () => {
+    const r = generateAllSchedules(getOrarioStudio(), events)
+    if (r.error) showError(r.error)
+    else showSuccess(`Studio ricalcolato! ${r.corsiPianificati} corsi aggiornati sulle tue disponibilità.`)
+  }
   const handleCellClick = d => {
     if (!d) return
     const ds = toDateStr(d)
@@ -256,9 +262,16 @@ export default function Calendario() {
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           <div className="card card-2">
             <SectionHeader action={
-              <button className="btn-ghost btn-sm" onClick={()=>setFormOpen(f=>!f)}>
-                {formOpen?'✕':'+ evento'}
-              </button>
+              <div style={{display:'flex', gap:6}}>
+                {corsi.length > 0 && (
+                  <button className="btn-ghost btn-sm" onClick={handleRecalculateStudio} title="Ricalcola la pianificazione dello studio in base agli impegni attuali">
+                    ⚡ Ricalcola Studio
+                  </button>
+                )}
+                <button className="btn-ghost btn-sm" onClick={()=>setFormOpen(f=>!f)}>
+                  {formOpen?'✕':'+ evento'}
+                </button>
+              </div>
             }>
               {selected?formatShort(selected):'seleziona giorno'}
             </SectionHeader>
