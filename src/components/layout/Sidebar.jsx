@@ -1,5 +1,7 @@
+// src/components/layout/Sidebar.jsx
 import { useState, useEffect } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 
 const Svg = ({ d, size=14 }) => (
   <svg width={size} height={size} viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }}>
@@ -18,80 +20,153 @@ const ICONS = {
   check:    "M1 7.5L4.5 11 13 2.5",
   notes:    "M2 1h10a1 1 0 011 1v10a1 1 0 01-1 1H2a1 1 0 01-1-1V2a1 1 0 011-1zM3 4h8M3 7h8M3 10h5",
   settings: "M7 5a2 2 0 100 4 2 2 0 000-4zM7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.6 2.6l1 1M10.4 10.4l1 1M11.4 2.6l-1 1M3.6 10.4l-1 1",
+  menu:     "M1.5 3.5h11M1.5 7h11M1.5 10.5h11",
+  close:    "M2 2l10 10M12 2L2 12",
 }
 
 const NAV = [
-  { to:'/',             label:'Overview',      icon:'overview', end:true },
-  { to:'/calendario',   label:'Calendario',    icon:'calendar'       },
-  { to:'/firme',        label:'Foglio Firme',  icon:'clock'          },
-  { to:'/finanze',      label:'Finanze',       icon:'wallet'         },
-  { to:'/risparmi',     label:'Risparmi',      icon:'savings'        },
-  { to:'/studio',       label:'Studio',        icon:'study'          },
-  { to:'/salute',       label:'Salute',        icon:'health'         },
+  { to:'/',             label:'Overview',     icon:'overview', end:true },
+  { to:'/calendario',   label:'Calendario',   icon:'calendar'       },
+  { to:'/firme',        label:'Firme',        icon:'clock'          },
+  { to:'/finanze',      label:'Finanze',      icon:'wallet'         },
+  { to:'/risparmi',     label:'Risparmi',     icon:'savings'        },
+  { to:'/studio',       label:'Studio',       icon:'study'          },
+  { to:'/salute',       label:'Salute',       icon:'health'         },
   { to:'/abitudini',    label:'Abitudini',    icon:'check'          },
   { to:'/note',         label:'Note',         icon:'notes'          },
 ]
 
-export default function Sidebar({ theme, onToggleTheme, userName }) {
+// Bottom nav items (5 max visibili su mobile)
+const BOTTOM_NAV = [
+  { to:'/',           label:'Home',      icon:'overview', end:true },
+  { to:'/finanze',    label:'Finanze',   icon:'wallet'            },
+  { to:'/calendario', label:'Calendario',icon:'calendar'          },
+  { to:'/studio',     label:'Studio',    icon:'study'             },
+  { to:'/salute',     label:'Salute',    icon:'health'            },
+]
+
+export default function Sidebar({ theme, onToggleTheme, userName, mobileOpen, onMobileClose }) {
+  const isMobile = useIsMobile()
+  const location = useLocation()
   const [time, setTime] = useState(new Date())
+
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
+  // Chiudi drawer quando cambia route su mobile
+  useEffect(() => {
+    if (isMobile && onMobileClose) onMobileClose()
+  }, [location.pathname])
+
   const timeStr = time.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
   const dateStr = time.toLocaleDateString('it-IT', { weekday:'short', day:'numeric', month:'short' })
 
+  const sidebarStyle = {
+    position: 'fixed',
+    left: 0,
+    top: 0,
+    height: '100vh',
+    width: 200,
+    background: 'var(--sf)',
+    borderRight: '1px solid var(--bd)',
+    display: 'flex',
+    flexDirection: 'column',
+    zIndex: 100,
+    transition: isMobile
+      ? 'transform .28s cubic-bezier(.4,0,.2,1), background .22s'
+      : 'background .22s, border-color .22s',
+    ...(isMobile && {
+      transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+      boxShadow: mobileOpen ? '4px 0 30px rgba(0,0,0,.18)' : 'none',
+      width: 220,
+    }),
+  }
+
   return (
-    <aside style={{
-      position:'fixed',left:0,top:0,height:'100vh',width:200,
-      background:'var(--sf)',borderRight:'1px solid var(--bd)',
-      display:'flex',flexDirection:'column',zIndex:100,
-      transition:'background .22s,border-color .22s',
-    }}>
-      {/* Brand + clock + theme toggle */}
-      <div style={{ padding:'18px 18px 16px', borderBottom:'1px solid var(--bd)' }}>
-        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
-          <span style={{ fontSize:15,fontWeight:700,letterSpacing:'-.03em',color:'var(--t1)' }}>
-            vita<span style={{ color:'var(--ac)' }}>OS</span>
-          </span>
-          <button onClick={onToggleTheme} title="Cambia tema"
-            style={{ width:34,height:19,borderRadius:10,border:'1px solid var(--bd2)',background:'var(--sf2)',cursor:'pointer',position:'relative',padding:0,transition:'background .2s' }}>
-            <span style={{ position:'absolute',left:2,top:2,width:13,height:13,background:'var(--ac)',borderRadius:'50%',transition:'transform .22s cubic-bezier(.4,0,.2,1)',display:'block',transform:theme==='dark'?'translateX(15px)':'translateX(0)' }} />
-          </button>
-        </div>
-        <div style={{ fontFamily:"'DM Mono',monospace" }}>
-          <div style={{ fontSize:17,fontWeight:500,color:'var(--t1)',letterSpacing:'-.01em',lineHeight:1 }}>{timeStr}</div>
-          <div style={{ fontSize:11,color:'var(--t2)',marginTop:3 }}>{dateStr}</div>
-        </div>
-      </div>
+    <>
+      {/* Overlay mobile */}
+      {isMobile && mobileOpen && (
+        <div className="sidebar-overlay" onClick={onMobileClose} />
+      )}
 
-      {/* Nav */}
-      <nav style={{ padding:'10px 0',flex:1,overflowY:'auto' }}>
-        {NAV.map(item => (
-          <NavLink key={item.to} to={item.to} end={item.end}
-            className={({ isActive }) => `nav-link${isActive?' active':''}`}
+      <aside style={sidebarStyle}>
+        {/* Brand + orologio + toggle tema */}
+        <div style={{ padding:'18px 18px 16px', borderBottom:'1px solid var(--bd)' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+            <span style={{ fontSize:15, fontWeight:700, letterSpacing:'-.03em', color:'var(--t1)' }}>
+              vita<span style={{ color:'var(--ac)' }}>OS</span>
+            </span>
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <button onClick={onToggleTheme} title="Cambia tema"
+                style={{ width:34,height:19,borderRadius:10,border:'1px solid var(--bd2)',background:'var(--sf2)',cursor:'pointer',position:'relative',padding:0,transition:'background .2s' }}>
+                <span style={{ position:'absolute',left:2,top:2,width:13,height:13,background:'var(--ac)',borderRadius:'50%',transition:'transform .22s cubic-bezier(.4,0,.2,1)',display:'block',transform:theme==='dark'?'translateX(15px)':'translateX(0)' }} />
+              </button>
+              {isMobile && (
+                <button onClick={onMobileClose}
+                  style={{ background:'transparent',border:'none',cursor:'pointer',color:'var(--t2)',padding:4,display:'flex',alignItems:'center' }}>
+                  <Svg d={ICONS.close} size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div style={{ fontFamily:"'DM Mono',monospace" }}>
+            <div style={{ fontSize:17,fontWeight:500,color:'var(--t1)',letterSpacing:'-.01em',lineHeight:1 }}>{timeStr}</div>
+            <div style={{ fontSize:11,color:'var(--t2)',marginTop:3 }}>{dateStr}</div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ padding:'10px 0', flex:1, overflowY:'auto' }}>
+          {NAV.map(item => (
+            <NavLink key={item.to} to={item.to} end={item.end}
+              className={({ isActive }) => `nav-link${isActive?' active':''}`}
+            >
+              <Svg d={ICONS[item.icon]} />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Bottom: user + settings */}
+        <div style={{ borderTop:'1px solid var(--bd)', padding:'10px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace",lineHeight:1.7 }}>
+            <div style={{ color:'var(--t1)',fontWeight:500,fontSize:12 }}>{userName||'vitaOS'}</div>
+            <span style={{ color:'var(--ac)',fontSize:10 }}>● attivo</span>
+          </div>
+          <NavLink to="/impostazioni"
+            className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+            style={{ padding:'7px',borderRadius:8,border:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--t2)',textDecoration:'none' }}
+            title="Impostazioni"
           >
-            <Svg d={ICONS[item.icon]} />
-            {item.label}
+            <Svg d={ICONS.settings} size={14} />
           </NavLink>
-        ))}
-      </nav>
-
-      {/* Bottom: user info + settings gear */}
-      <div style={{ borderTop:'1px solid var(--bd)', padding:'10px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace",lineHeight:1.7 }}>
-          <div style={{ color:'var(--t1)',fontWeight:500,fontSize:12 }}>{userName||'vitaOS'}</div>
-          <span style={{ color:'var(--ac)',fontSize:10 }}>● attivo</span>
         </div>
-        <NavLink to="/impostazioni"
-          className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-          style={{ padding:'7px',borderRadius:8,border:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--t2)',textDecoration:'none' }}
-          title="Impostazioni"
-        >
-          <Svg d={ICONS.settings} size={14} />
-        </NavLink>
-      </div>
-    </aside>
+      </aside>
+
+      {/* ── Bottom Nav (solo mobile) ── */}
+      {isMobile && (
+        <nav className="mobile-bottom-nav">
+          {BOTTOM_NAV.map(item => (
+            <NavLink key={item.to} to={item.to} end={item.end}
+              className={({ isActive }) => isActive ? 'active' : ''}
+            >
+              <Svg d={ICONS[item.icon]} size={20} />
+              {item.label}
+            </NavLink>
+          ))}
+          {/* Burger per il resto del menu */}
+          <button
+            onClick={() => onMobileClose ? onMobileClose() : null}
+            style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,color:'var(--t3)',fontSize:9,fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',background:'transparent',border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",borderRadius:8,margin:'4px 2px' }}
+            onClick_={undefined}
+          >
+            <Svg d={ICONS.menu} size={20} />
+            Altro
+          </button>
+        </nav>
+      )}
+    </>
   )
 }

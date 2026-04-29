@@ -1,0 +1,194 @@
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE ADDITIONS — aggiungere in fondo a src/index.css
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Grid helpers ── */
+.grid-kpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.grid-kpi-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.grid-2col-equal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.grid-sidebar-right {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 12px;
+}
+.grid-sidebar-left {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 14px;
+}
+.grid-7col {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+/* ── Page padding ── */
+.page-pad {
+  padding: 28px;
+}
+
+/* ── Mobile bottom nav ── */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* ── Sidebar overlay ── */
+.sidebar-overlay {
+  display: none;
+}
+
+/* ═══════════════════════
+   TABLET  (< 1024px)
+   ═══════════════════════ */
+@media (max-width: 1024px) {
+  .grid-2col {
+    grid-template-columns: 1fr;
+  }
+  .grid-sidebar-right {
+    grid-template-columns: 1fr;
+  }
+  .grid-sidebar-left {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════
+   MOBILE  (< 768px)
+   ═══════════════════════ */
+@media (max-width: 768px) {
+  /* Page padding */
+  .page-pad {
+    padding: 16px 14px 90px; /* bottom per nav */
+  }
+
+  /* KPI grids */
+  .grid-kpi {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .grid-kpi-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .grid-2col,
+  .grid-2col-equal,
+  .grid-sidebar-right,
+  .grid-sidebar-left {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Card font adjustments */
+  .stat-val {
+    font-size: 20px;
+  }
+
+  /* 7-col calendar/gym grid → scroll orizzontale */
+  .grid-7col {
+    grid-template-columns: repeat(7, minmax(90px, 1fr));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  /* Cards padding ridotto */
+  .card {
+    padding: 12px;
+  }
+
+  /* Mobile bottom navigation */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: var(--sf);
+    border-top: 1px solid var(--bd);
+    z-index: 200;
+    align-items: stretch;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+  }
+  .mobile-bottom-nav a,
+  .mobile-bottom-nav button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--t3);
+    text-decoration: none;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: color .16s;
+    border-radius: 8px;
+    margin: 4px 2px;
+  }
+  .mobile-bottom-nav a.active,
+  .mobile-bottom-nav button.active {
+    color: var(--ac);
+    background: var(--ac-bg);
+  }
+  .mobile-bottom-nav svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Sidebar overlay */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 98;
+    backdrop-filter: blur(2px);
+    animation: fadeIn .18s ease;
+  }
+}
+
+/* ═══════════════════════
+   XS  (< 480px)
+   ═══════════════════════ */
+@media (max-width: 480px) {
+  .grid-kpi {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .stat-val {
+    font-size: 18px;
+  }
+  .page-pad {
+    padding: 12px 10px 90px;
+  }
+}

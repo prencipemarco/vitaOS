@@ -1,8 +1,10 @@
-import { useEffect, lazy, Suspense } from 'react'
+// src/App.jsx
+import { useEffect, lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Sidebar from './components/layout/Sidebar'
 import { useImpostazioni } from './hooks/useImpostazioni'
 import { GlobalModal, SkeletonPage } from './components/ui'
+import { useIsMobile } from './hooks/useMediaQuery'
 
 const Dashboard     = lazy(() => import('./pages/Dashboard'))
 const Calendario    = lazy(() => import('./pages/Calendario'))
@@ -19,9 +21,44 @@ function Loader() {
   return <SkeletonPage />
 }
 
+// Hamburger button visibile solo su mobile
+function HamburgerBtn({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Apri menu"
+      style={{
+        position: 'fixed',
+        top: 14,
+        left: 14,
+        zIndex: 97,
+        width: 38,
+        height: 38,
+        borderRadius: 10,
+        border: '1px solid var(--bd2)',
+        background: 'var(--sf)',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        boxShadow: '0 2px 8px rgba(0,0,0,.1)',
+        transition: 'all .16s',
+      }}
+    >
+      {[0,1,2].map(i => (
+        <span key={i} style={{ display:'block', width:16, height:1.5, background:'var(--t1)', borderRadius:1 }} />
+      ))}
+    </button>
+  )
+}
+
 function AppInner() {
   const { settings, update } = useImpostazioni()
   const theme = settings.theme || 'light'
+  const isMobile = useIsMobile()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const applyTheme = (t) => {
@@ -44,9 +81,23 @@ function AppInner() {
   }
 
   return (
-    <div style={{ minHeight:'100vh' }}>
-      <Sidebar theme={theme} onToggleTheme={toggleTheme} userName={settings.name} />
-      <main style={{ marginLeft:200,minHeight:'100vh',overflowX:'hidden' }}>
+    <div style={{ minHeight: '100vh' }}>
+      {/* Hamburger su mobile */}
+      {isMobile && <HamburgerBtn onClick={() => setSidebarOpen(true)} />}
+
+      <Sidebar
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        userName={settings.name}
+        mobileOpen={sidebarOpen}
+        onMobileClose={() => setSidebarOpen(false)}
+      />
+
+      <main style={{
+        marginLeft: isMobile ? 0 : 200,
+        minHeight: '100vh',
+        overflowX: 'hidden',
+      }}>
         <Suspense fallback={<Loader />}>
           <Routes>
             <Route path="/"              element={<Dashboard />} />
