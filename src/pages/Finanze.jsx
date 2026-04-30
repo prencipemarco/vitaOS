@@ -4,7 +4,7 @@ import { useFinanze, CATEGORIE_USCITE, CATEGORIE_ENTRATE } from '../hooks/useFin
 import { PageHeader, Grid, SectionHeader, FormPanel, InputRow, Dot, MonthNav, EmptyState, showError, showConfirm, showSuccess, OnboardingModal, Modal } from '../components/ui'
 import { formatCurrency, formatCurrencyDec, formatShort } from '../utils/dateHelpers'
 
-const COLORS = ['#C46A3C','#3A5F8A','#3A7059','#7A5FA0','#B07040','#A04545','#5A8A6A','#888']
+const COLORS = ['#6366F1','#8B5CF6','#06B6D4','#10B981','#F59E0B','#F43F5E','#64748B','#EC4899']
 const PieTip = ({ active,payload }) => !active||!payload?.length?null:<div style={{ background:'var(--sf)',border:'1px solid var(--bd2)',borderRadius:8,padding:'8px 12px',fontSize:12 }}><div style={{ color:'var(--t2)',marginBottom:3 }}>{payload[0].name}</div><div style={{ color:'var(--ac)',fontFamily:"'DM Mono',monospace",fontWeight:600 }}>{formatCurrency(payload[0].value)}</div></div>
 const LineTip = ({ active,payload,label }) => !active||!payload?.length?null:<div style={{ background:'var(--sf)',border:'1px solid var(--bd2)',borderRadius:8,padding:'8px 12px',fontSize:12 }}><div style={{ color:'var(--t3)',marginBottom:4 }}>{label}</div>{payload.map(p=><div key={p.name} style={{ color:p.color,fontFamily:"'DM Mono',monospace" }}>{p.name}: {formatCurrency(p.value)}</div>)}</div>
 
