@@ -191,10 +191,10 @@ export default function Calendario() {
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <span style={{fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace"}}>
-            <span style={{color:TIPI_EVENTO.ferie.color,marginRight:3}}>■</span>{countFerie(year)}g ferie
+            <span style={{color:motivazioni.find(m=>m.id==='ferie')?.colore || '#3A7059',marginRight:3}}>■</span>{countFerie(year)}g ferie
           </span>
           <span style={{fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace"}}>
-            <span style={{color:TIPI_EVENTO.permesso.color,marginRight:3}}>■</span>{countPermessi(year)}h perm.
+            <span style={{color:motivazioni.find(m=>m.id==='permesso')?.colore || '#7A5FA0',marginRight:3}}>■</span>{countPermessi(year)}h perm.
           </span>
           <span style={{fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace"}}>
             <span style={{color:'#E8B84B',marginRight:3}}>■</span>{festivitaMonth.length} fest.
@@ -275,8 +275,12 @@ export default function Calendario() {
                         {cellItems.slice(0,4).map((item,ci)=>{
                           const isStudy = !!item.corsoNome
                           const isGoal  = item.id?.toString().startsWith('goal-')
-                          const color   = isGoal?'#7A5FA0':isStudy?STUDIO_COLOR:(TIPI_EVENTO[item.tipo]?.color||'#888')
-                          const label   = isStudy?(item.corsoNome?.slice(0,14)||item.titolo):item.titolo
+                          const isAssenza = item.isAssenza
+                          const motivazione = isAssenza ? motivazioni.find(m=>m.id===item.tipo) : null
+                          
+                          const color = isGoal ? '#7A5FA0' : isStudy ? STUDIO_COLOR : isAssenza ? (motivazione?.colore || 'var(--rd)') : (TIPI_EVENTO[item.tipo]?.color || '#888')
+                          const label = isStudy ? (item.corsoNome?.slice(0,14)||item.titolo) : (isAssenza ? (motivazione?.label || 'Assenza') : item.titolo)
+                          
                           return (
                             <div key={item.id||ci} style={{
                               background:color+'1A',borderLeft:`2px solid ${color}`,
