@@ -442,6 +442,8 @@ export default function Calendario() {
             {allSelected.length===0&&!formOpen
               ? <EmptyState message={selected?'Nessun evento':'Clicca un giorno'} />
               : allSelected.map((item,i)=>{
+                const isStudy = !!item.corsoNome
+                const isGoal  = item.id?.toString().startsWith('goal-')
                 const isAssenza = item.isAssenza
                 const motivazione = isAssenza ? motivazioni.find(m=>m.id===item.tipo) : null
                 const color  = isGoal?'#7A5FA0':isStudy?STUDIO_COLOR:isAssenza?(motivazione?.colore||'var(--rd)'):(TIPI_EVENTO[item.tipo]?.color||'#888')
