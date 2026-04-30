@@ -36,14 +36,7 @@ const NAV = [
   { to:'/note',         label:'Note',         icon:'notes'          },
 ]
 
-// Bottom nav items (5 max visibili su mobile)
-const BOTTOM_NAV = [
-  { to:'/',           label:'Home',      icon:'overview', end:true },
-  { to:'/finanze',    label:'Finanze',   icon:'wallet'            },
-  { to:'/calendario', label:'Calendario',icon:'calendar'          },
-  { to:'/studio',     label:'Studio',    icon:'study'             },
-  { to:'/salute',     label:'Salute',    icon:'health'            },
-]
+
 
 export default function Sidebar({ theme, onToggleTheme, userName, mobileOpen, onMobileClose }) {
   const isMobile = useIsMobile()
@@ -144,29 +137,6 @@ export default function Sidebar({ theme, onToggleTheme, userName, mobileOpen, on
           </NavLink>
         </div>
       </aside>
-
-      {/* ── Bottom Nav (solo mobile) ── */}
-      {isMobile && (
-        <nav className="mobile-bottom-nav">
-          {BOTTOM_NAV.map(item => (
-            <NavLink key={item.to} to={item.to} end={item.end}
-              className={({ isActive }) => isActive ? 'active' : ''}
-            >
-              <Svg d={ICONS[item.icon]} size={20} />
-              {item.label}
-            </NavLink>
-          ))}
-          {/* Burger per il resto del menu */}
-          <button
-            onClick={() => onMobileClose ? onMobileClose() : null}
-            style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,color:'var(--t3)',fontSize:9,fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',background:'transparent',border:'none',cursor:'pointer',fontFamily:"'DM Sans',sans-serif",borderRadius:8,margin:'4px 2px' }}
-            onClick_={undefined}
-          >
-            <Svg d={ICONS.menu} size={20} />
-            Altro
-          </button>
-        </nav>
-      )}
     </>
   )
 }
