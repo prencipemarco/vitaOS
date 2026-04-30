@@ -9,16 +9,28 @@ function timeToMin(t) {
 export function useFirme() {
   const [firme, setFirme] = useLocalStorage('wl_firme', [])
 
-  const hasDuplicate = (data) => firme.some(f => f.data === data)
+  const checkOverlap = (data, entrata, uscita) => {
+    const inM = timeToMin(entrata)
+    const outM = timeToMin(uscita)
+    return firme
+      .filter(f => f.data === data)
+      .some(f => {
+        const fIn = timeToMin(f.entrata)
+        const fOut = timeToMin(f.uscita)
+        // Sovrapposizione se l'inizio o la fine del nuovo intervallo cade dentro uno esistente
+        return (inM >= fIn && inM < fOut) || (outM > fIn && outM <= fOut) || (inM <= fIn && outM >= fOut)
+      })
+  }
 
   const addFirma = (firma) => {
     if (!firma.data || !firma.entrata || !firma.uscita) return { error: 'Campi mancanti' }
-    if (hasDuplicate(firma.data)) return { error: 'Giornata già registrata per questa data' }
+    if (checkOverlap(firma.data, firma.entrata, firma.uscita)) {
+      return { error: 'Orario sovrapposto a una sessione esistente' }
+    }
     const inM = timeToMin(firma.entrata)
     const outM = timeToMin(firma.uscita)
     if (outM <= inM) return { error: 'Orario uscita deve essere dopo entrata' }
     const id = Date.now()
-    // No pausa field anymore
     setFirme(prev => [...prev, { data: firma.data, entrata: firma.entrata, uscita: firma.uscita, id }])
     return { success: true, id }
   }
@@ -41,5 +53,5 @@ export function useFirme() {
   const stimaStipendio = (year, month, rate) =>
     Math.round(totaleOre(year, month) * rate)
 
-  return { firme, addFirma, removeFirma, calcOre, totaleOre, stimaStipendio, hasDuplicate }
+  return { firme, addFirma, removeFirma, calcOre, totaleOre, stimaStipendio, checkOverlap }
 }

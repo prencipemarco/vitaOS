@@ -18,7 +18,7 @@ export default function FoglioDiFirme() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
-  const { firme, addFirma, removeFirma, calcOre, totaleOre, hasDuplicate } = useFirme()
+  const { firme, addFirma, removeFirma, calcOre, totaleOre, checkOverlap } = useFirme()
   const { settings, tariffaCalcolata, oreContrattualiMensili, getOrarioGiorno } = useImpostazioni()
 
   const todayStr = now.toISOString().slice(0, 10)
@@ -70,14 +70,12 @@ export default function FoglioDiFirme() {
     : 'Nessun orario configurato per questo giorno'
 
   const handleAdd = () => {
-    if (hasDuplicate(form.data)) {
-      showError(`Giornata già registrata per il ${new Date(form.data+'T12:00').toLocaleDateString('it-IT',{day:'numeric',month:'long'})}`)
-      return
-    }
     if (!form.entrata || !form.uscita) { showError('Inserisci orario entrata e uscita'); return }
     const result = addFirma(form)
     if (result?.error) { showError(result.error); return }
-    showSuccess('Giornata registrata.')
+    showSuccess('Sessione registrata.')
+    // Non resettiamo la data, solo gli orari per facilitare inserimenti multipli
+    setForm(f => ({ ...f, entrata: '', uscita: '' }))
   }
 
   const handleRemove = (f) => showConfirm(
@@ -102,7 +100,7 @@ export default function FoglioDiFirme() {
         {[
           ['ORE LAVORATE', ore>0?`${ore}h`:'—', 'var(--ac)', target>0?`target ${target}h`:'configura orario'],
           ['AVANZAMENTO', target>0?`${pct}%`:'—', undefined, target>0?`${Math.max(0,target-ore).toFixed(1)}h mancanti`:'—'],
-          ['GIORNI REGISTRATI', monthFirme.length||'—', undefined, 'questo mese'],
+          ['GIORNI REGISTRATI', new Set(monthFirme.map(f=>f.data)).size || '—', undefined, 'questo mese'],
           ['STIMA STIPENDIO', stima>0?formatCurrency(stima):'—', undefined, rate>0?`${formatCurrency(rate)}/h`:'imposta tariffa'],
         ].map(([l,v,c,s],i) => (
           <div key={l} className={`card card-${i+1}`}>
@@ -177,9 +175,9 @@ export default function FoglioDiFirme() {
                 <span>·</span>
                 <span style={{ color: selectedOrario?.abilitato?'var(--ac)':'var(--t3)' }}>{scheduleLabel}</span>
               </div>
-              {hasDuplicate(form.data) && (
+              {checkOverlap(form.data, form.entrata, form.uscita) && (
                 <div style={{ fontSize:11,color:'var(--rd)',marginTop:4,padding:'4px 8px',background:'rgba(160,69,69,.07)',borderRadius:6 }}>
-                  ⚠ Giornata già registrata
+                  ⚠ Orario sovrapposto a una sessione esistente
                 </div>
               )}
             </div>
