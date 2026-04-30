@@ -6,10 +6,16 @@ import { useLocalStorage } from '../../hooks/useLocalStorage'
 
 export default function FirmeReminder() {
   const { firme, addFirma } = useFirme()
-  const { getOrarioGiorno } = useImpostazioni()
+  const { getOrarioGiorno, settings } = useImpostazioni()
   const [reminderState, setReminderState] = useLocalStorage('wl_reminder_state', { date: '', action: '' })
   const [show, setShow] = useState(false)
   const [reasonMode, setReasonMode] = useState(false)
+
+  const remSettings = settings.reminderFirme || { abilitato: true, oraTrigger: '18:00', minRitardoFineTurno: 30 }
+  const motivazioni = settings.motivazioniAssenza || [
+    { id: 'malattia', label: 'Malattia', icon: '🤒', colore: '#EF4444' },
+    { id: 'ferie', label: 'Ferie', icon: '🏖️', colore: '#3B82F6' },
+  ]
 
   const now = new Date()
   const todayStr = now.toISOString().slice(0, 10)
@@ -18,22 +24,26 @@ export default function FirmeReminder() {
   const currentTimeMin = currentHour * 60 + currentMin
 
   useEffect(() => {
-    // Controllo ogni minuto (opzionale, basterebbe al caricamento e ogni tanto)
+    if (!remSettings.abilitato) return
+
     const check = () => {
       const dow = now.getDay()
       const orario = getOrarioGiorno(dow)
 
-      // Se non è un giorno lavorativo o abbiamo già gestito il reminder oggi, usciamo
       if (!orario?.abilitato || reminderState.date === todayStr) return
 
-      // Calcoliamo quando triggerare il reminder: 
-      // O alle 18:00 (default) o 30 min dopo la fine del turno previsto
+      const [trigH, trigM] = (remSettings.oraTrigger || "18:00").split(':').map(Number)
+      const trigTimeMin = trigH * 60 + trigM
+
       const [endH, endM] = (orario.alle || "18:00").split(':').map(Number)
-      const triggerTimeMin = Math.max(18 * 60, (endH * 60 + endM) + 30)
+      const delayTimeMin = (endH * 60 + endM) + (remSettings.minRitardoFineTurno || 30)
+
+      // Il reminder scatta se l'ora attuale ha superato SIA l'ora di trigger SIA l'ora di fine turno + ritardo
+      const effectiveTriggerMin = Math.max(trigTimeMin, delayTimeMin)
 
       const alreadyLogged = firme.some(f => f.data === todayStr)
 
-      if (currentTimeMin >= triggerTimeMin && !alreadyLogged) {
+      if (currentTimeMin >= effectiveTriggerMin && !alreadyLogged) {
         setShow(true)
       }
     }
@@ -41,7 +51,7 @@ export default function FirmeReminder() {
     check()
     const timer = setInterval(check, 60000)
     return () => clearInterval(timer)
-  }, [firme, reminderState, todayStr, currentTimeMin])
+  }, [firme, reminderState, todayStr, currentTimeMin, remSettings, getOrarioGiorno])
 
   const handleStandard = () => {
     const dow = now.getDay()
@@ -50,25 +60,22 @@ export default function FirmeReminder() {
       data: todayStr,
       entrata: orario.dalle,
       uscita: orario.alle,
-      nota: 'Inserimento automatico'
+      nota: 'Inserimento automatico (Reminder)'
     })
     setReminderState({ date: todayStr, action: 'confirmed' })
     setShow(false)
-    showSuccess('Orario standard registrato con successo.')
+    showSuccess('Orario standard registrato.')
   }
 
   const handleSnooze = () => {
-    // Per oggi non rompermi più, riprova domani
     setReminderState({ date: todayStr, action: 'snoozed' })
     setShow(false)
   }
 
   const handleNoWork = (reason) => {
-    // Possiamo scegliere di loggare un'entrata a 0 ore con nota o semplicemente ignorare
-    // In questo caso, ignoriamo il reminder per oggi salvando lo stato
-    setReminderState({ date: todayStr, action: 'skipped', reason })
+    setReminderState({ date: todayStr, action: 'skipped', reason: reason.label })
     setShow(false)
-    showSuccess(`Nota salvata: ${reason}. Oggi non verranno richieste firme.`)
+    showSuccess(`Oggi segnato come assenza per: ${reason.label}`)
   }
 
   const dow = now.getDay()
@@ -80,7 +87,7 @@ export default function FirmeReminder() {
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
           <p style={{ fontSize:14, color:'var(--t2)', lineHeight:1.5 }}>
             Ciao! Sono le <strong>{currentHour}:{String(currentMin).padStart(2,'0')}</strong> e non hai ancora registrato ore per oggi. 
-            Il tuo orario previsto era <strong>{orario?.dalle} – {orario?.alle}</strong>.
+            L'orario previsto era <strong>{orario?.dalle} – {orario?.alle}</strong>.
           </p>
           
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
@@ -90,18 +97,19 @@ export default function FirmeReminder() {
             <button className="btn-ghost" onClick={() => setReasonMode(true)}>
               Oggi non ho lavorato...
             </button>
-            <button className="btn-ghost" onClick={handleSnooze} style={{ border:'none', color:'var(--t3)', fontSize:12 }}>
+            <button className="btn-ghost" onClick={handleSnooze} style={{ border:'none', color:'var(--t3)', fontSize:12, marginTop:4 }}>
               Ricordamelo più tardi
             </button>
           </div>
         </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <p style={{ fontSize:14, color:'var(--t2)' }}>Specifica il motivo dell'assenza:</p>
+          <p style={{ fontSize:14, color:'var(--t2)' }}>Scegli il motivo dell'assenza:</p>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            {['Malattia', 'Ferie', 'Permesso', 'Festività', 'Altro'].map(r => (
-              <button key={r} className="btn-ghost" onClick={() => handleNoWork(r)} style={{ padding:'10px' }}>
-                {r}
+            {motivazioni.map(m => (
+              <button key={m.id} className="btn-ghost" onClick={() => handleNoWork(m)} style={{ padding:'12px 10px', textAlign:'left', display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:18 }}>{m.icon}</span>
+                <span style={{ fontSize:13, fontWeight:500 }}>{m.label}</span>
               </button>
             ))}
           </div>

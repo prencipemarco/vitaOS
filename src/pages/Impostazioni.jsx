@@ -464,17 +464,59 @@ export default function Impostazioni() {
             </div>
           </div>
 
-          {/* API Key */}
-          <div className="card card-6">
-            <div className="label-xs" style={{ marginBottom:4 }}>AI — chiave API Anthropic (opzionale)</div>
+          {/* ── Reminder Firme ── */}
+          <div className="card card-7">
+            <div className="label-xs" style={{ marginBottom:4 }}>promemoria firme (proattivo)</div>
             <div style={{ fontSize:12,color:'var(--t2)',marginBottom:10,lineHeight:1.6 }}>
-              Consente la generazione automatica dei piani di studio dalla sezione Studio.
+              Configura quando il sistema deve ricordarti di segnare le ore se non l'hai ancora fatto.
             </div>
-            <Row label="API Key" sub="Salvata localmente nel browser">
-              <input className="input-field" type="password" value={draft.anthropicApiKey||''}
-                onChange={e=>handleUpdate('anthropicApiKey',e.target.value)}
-                placeholder="sk-ant-api03-..." style={{ maxWidth:240,fontFamily:"'DM Mono',monospace" }} />
+            <Row label="Attiva promemoria">
+              <Toggle checked={draft.reminderFirme?.abilitato} onChange={v => handleUpdateNested('reminderFirme', null, { ...draft.reminderFirme, abilitato:v })} />
             </Row>
+            {draft.reminderFirme?.abilitato && (
+              <>
+                <Row label="Orario di attivazione" sub="Il reminder apparirà dopo quest'ora">
+                  <input type="time" value={draft.reminderFirme.oraTrigger || '18:00'}
+                    onChange={e => handleUpdateNested('reminderFirme', null, { ...draft.reminderFirme, oraTrigger: e.target.value })}
+                    className="input-field" style={{ maxWidth:100, fontFamily:"'DM Mono',monospace" }} />
+                </Row>
+                <Row label="Ritardo fine turno (min)" sub="Minuti di attesa dopo la fine del turno previsto">
+                  <Inp type="number" value={draft.reminderFirme.minRitardoFineTurno || 30}
+                    onChange={e => handleUpdateNested('reminderFirme', null, { ...draft.reminderFirme, minRitardoFineTurno: parseInt(e.target.value)||0 })}
+                    style={{ maxWidth:80 }} />
+                </Row>
+              </>
+            )}
+          </div>
+
+          {/* ── Motivazioni Assenza ── */}
+          <div className="card card-8">
+            <div className="label-xs" style={{ marginBottom:4 }}>motivazioni assenza dal lavoro</div>
+            <div style={{ fontSize:12,color:'var(--t2)',marginBottom:10,lineHeight:1.6 }}>
+              Personalizza le motivazioni che appaiono nel calendario e nel promemoria.
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {(draft.motivazioniAssenza || []).map((m, i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:'var(--sf2)', borderRadius:8 }}>
+                  <Inp value={m.icon} onChange={e => {
+                    const newM = [...draft.motivazioniAssenza]; newM[i].icon = e.target.value; handleUpdate('motivazioniAssenza', newM)
+                  }} style={{ width:40, textAlign:'center' }} />
+                  <Inp value={m.label} onChange={e => {
+                    const newM = [...draft.motivazioniAssenza]; newM[i].label = e.target.value; handleUpdate('motivazioniAssenza', newM)
+                  }} style={{ flex:1 }} />
+                  <input type="color" value={m.colore} onChange={e => {
+                    const newM = [...draft.motivazioniAssenza]; newM[i].colore = e.target.value; handleUpdate('motivazioniAssenza', newM)
+                  }} style={{ width:30, height:30, border:'none', padding:0, background:'none', cursor:'pointer' }} />
+                  <button className="btn-danger" onClick={() => {
+                    const newM = draft.motivazioniAssenza.filter((_, idx) => idx !== i); handleUpdate('motivazioniAssenza', newM)
+                  }} style={{ padding:'5px 8px' }}>✕</button>
+                </div>
+              ))}
+              <button className="btn-ghost" style={{ marginTop:4, fontSize:12 }} onClick={() => {
+                const newM = [...(draft.motivazioniAssenza || []), { id: Date.now().toString(), label: 'Nuovo', icon: '❓', colore: '#888888' }]
+                handleUpdate('motivazioniAssenza', newM)
+              }}>+ Aggiungi motivazione</button>
+            </div>
           </div>
         </div>
       )}

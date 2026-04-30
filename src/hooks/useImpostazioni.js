@@ -56,6 +56,19 @@ export const DEFAULT_SETTINGS = {
   tariffaOraria: '',
   anthropicApiKey: '',
   theme: 'light',
+  reminderFirme: {
+    abilitato: true,
+    oraTrigger: '18:00',
+    minRitardoFineTurno: 30,
+  },
+  motivazioniAssenza: [
+    { id: 'malattia', label: 'Malattia', icon: '🤒', colore: '#EF4444' },
+    { id: 'ferie', label: 'Ferie', icon: '🏖️', colore: '#3B82F6' },
+    { id: 'permesso', label: 'Permesso', icon: '⌛', colore: '#F59E0B' },
+    { id: 'festivita', label: 'Festività', icon: '🎉', colore: '#10B981' },
+    { id: 'personale', label: 'Personale', icon: '👤', colore: '#8B5CF6' },
+    { id: 'infortunio', label: 'Infortunio', icon: '🤕', colore: '#F43F5E' },
+  ],
 }
 
 function timeToMin(t) {

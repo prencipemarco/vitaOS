@@ -3,10 +3,8 @@ import { useLocalStorage } from './useLocalStorage'
 export const TIPI_EVENTO = {
   lavoro:       { label: 'Lavoro',       color: '#3A5F8A' },
   straordinario:{ label: 'Straordinario',color: '#C46A3C' },
-  malattia:     { label: 'Malattia',     color: '#A04545' },
-  ferie:        { label: 'Ferie',        color: '#3A7059' },
-  permesso:     { label: 'Permesso',     color: '#7A5FA0' },
   personale:    { label: 'Personale',    color: '#888'    },
+  altro:        { label: 'Altro',        color: '#64748B' },
 }
 
 export function useCalendario() {
@@ -15,7 +13,18 @@ export function useCalendario() {
 
   const addEvent = (ev) => {
     const id = ++_nid
-    setEvents(prev => [...prev, { ...ev, id }])
+    setEvents(prev => [...prev, { 
+      titolo: '', 
+      note: '', 
+      data: '', 
+      ora: '', 
+      oraFine: '', 
+      tipo: 'personale', 
+      isAssenza: false, 
+      allegatiIds: [], 
+      ...ev, 
+      id 
+    }])
     return id
   }
 

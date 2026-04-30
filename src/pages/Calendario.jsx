@@ -4,6 +4,7 @@ import { useRisparmi } from '../hooks/useRisparmi'
 import { useImpostazioni } from '../hooks/useImpostazioni'
 import { useStudio } from '../hooks/useStudio'
 import { useSalute, TIPI_GIORNO } from '../hooks/useSalute'
+import { useFiles } from '../hooks/useFiles'
 import { getFestivita, getPonti, isFestivita, getFestivitaNome } from '../utils/festivita'
 import { buildCalendarGrid, MESI, GIORNI_BREVI, todayStr, formatShort } from '../utils/dateHelpers'
 import { PageHeader, SectionHeader, FormPanel, InputRow, Badge, EmptyState, showConfirm, showSuccess, showError, OnboardingModal } from '../components/ui'
@@ -28,8 +29,13 @@ export default function Calendario() {
   const [month,setMonth] = useState(now.getMonth())
   const [selected,setSelected] = useState(todayStr())
   const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState('evento') // 'evento' o 'assenza'
   const [showPonti,setShowPonti] = useState(false)
-  const [form, setForm] = useState({ titolo:'', data:todayStr(), ora:'', oraFine:'', tipo:'lavoro', note:'', ore:8 })
+  const [form, setForm] = useState({ titolo:'', data:todayStr(), ora:'', oraFine:'', tipo:'lavoro', note:'', ore:8, isAssenza: false, allegati: [] })
+
+  const { saveFile, getFileUrl, removeFile } = useFiles()
+  const { settings } = useImpostazioni()
+  const motivazioni = settings.motivazioniAssenza || []
 
   const {events,addEvent,removeEvent,eventsForDate,eventsForMonth,countFerie,countPermessi} = useCalendario()
   const {goals} = useRisparmi()
@@ -108,10 +114,45 @@ export default function Calendario() {
   const allSelected     = [...selectedEvents,...selectedGoals,...selectedStudy]
 
   const handleAdd = () => {
-    if (!form.titolo.trim()||!form.data) return
-    addEvent({...form})
-    setForm({titolo:'',data:selected||today,ora:'',oraFine:'',tipo:'lavoro',note:'',ore:8})
+    const isAssenza = formMode === 'assenza'
+    if (!isAssenza && !form.titolo.trim()) { showError('Inserisci un titolo'); return }
+    
+    addEvent({
+      ...form,
+      isAssenza,
+      titolo: isAssenza ? (motivazioni.find(m=>m.id===form.tipo)?.label || 'Assenza') : form.titolo
+    })
+    
+    setForm({titolo:'',data:selected||today,ora:'',oraFine:'',tipo:'lavoro',note:'',ore:8, isAssenza: false, allegati: []})
     setFormOpen(false)
+  }
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const fileData = await saveFile(file)
+      setForm(f => ({ ...f, allegati: [...(f.allegati || []), fileData] }))
+      showSuccess('File caricato correttamente.')
+    } catch (err) {
+      showError('Errore nel caricamento del file.')
+    }
+  }
+
+  const handleRemoveFile = async (id, index) => {
+    await removeFile(id)
+    setForm(f => ({ ...f, allegati: f.allegati.filter((_, i) => i !== index) }))
+  }
+
+  const handleDownloadFile = async (id, name) => {
+    const url = await getFileUrl(id)
+    if (url) {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      a.click()
+      URL.revokeObjectURL(url)
+    }
   }
   const handleRemove = (id) => showConfirm('Rimuovere questo evento?',()=>removeEvent(id))
   
@@ -268,8 +309,11 @@ export default function Calendario() {
                     ⚡ Ricalcola Studio
                   </button>
                 )}
-                <button className="btn-ghost btn-sm" onClick={()=>setFormOpen(f=>!f)}>
-                  {formOpen?'✕':'+ evento'}
+                <button className="btn-ghost btn-sm" onClick={() => { setFormMode('evento'); setFormOpen(!formOpen || formMode==='assenza') }}>
+                  {formOpen && formMode==='evento' ? '✕' : '+ evento'}
+                </button>
+                <button className="btn-ghost btn-sm" onClick={() => { setFormMode('assenza'); setFormOpen(!formOpen || formMode==='evento') }} style={{ color:'var(--rd)' }}>
+                  {formOpen && formMode==='assenza' ? '✕' : '+ assenza'}
                 </button>
               </div>
             }>
@@ -319,50 +363,95 @@ export default function Calendario() {
             })()}
 
             <FormPanel open={formOpen}>
-              <input className="input-field" placeholder="Titolo evento" value={form.titolo}
-                onChange={e=>setForm(f=>({...f,titolo:e.target.value}))} />
+              <div style={{ fontSize:12, fontWeight:600, color:formMode==='assenza'?'var(--rd)':'var(--ac)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.05em' }}>
+                {formMode === 'assenza' ? '🚫 Registra Assenza Lavorativa' : '📅 Nuovo Impegno Personale'}
+              </div>
+
+              {formMode === 'evento' ? (
+                <input className="input-field" placeholder="Titolo evento" value={form.titolo}
+                  onChange={e=>setForm(f=>({...f,titolo:e.target.value}))} />
+              ) : (
+                <select className="input-field" value={form.tipo}
+                  onChange={e=>setForm(f=>({...f,tipo:e.target.value}))}>
+                  <option value="">Seleziona motivo...</option>
+                  {motivazioni.map(m => <option key={m.id} value={m.id}>{m.icon} {m.label}</option>)}
+                </select>
+              )}
+
               <div style={{ display:'flex', gap:7, alignItems:'center' }}>
                 <input className="input-field" type="date" value={form.data}
                   onChange={e=>setForm(f=>({...f,data:e.target.value}))} style={{flex:1}} />
-                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <input className="input-field" type="time" value={form.ora}
-                    onChange={e=>setForm(f=>({...f,ora:e.target.value}))} style={{width:74, padding:'7px 4px', fontSize:11}} title="Ora inizio" />
-                  <span style={{color:'var(--t3)', fontSize:10}}>→</span>
-                  <input className="input-field" type="time" value={form.oraFine||''}
-                    onChange={e=>setForm(f=>({...f,oraFine:e.target.value}))} style={{width:74, padding:'7px 4px', fontSize:11}} title="Ora fine (opzionale)" />
-                </div>
+                {formMode === 'evento' && (
+                  <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                    <input className="input-field" type="time" value={form.ora}
+                      onChange={e=>setForm(f=>({...f,ora:e.target.value}))} style={{width:74, padding:'7px 4px', fontSize:11}} title="Ora inizio" />
+                    <span style={{color:'var(--t3)', fontSize:10}}>→</span>
+                    <input className="input-field" type="time" value={form.oraFine||''}
+                      onChange={e=>setForm(f=>({...f,oraFine:e.target.value}))} style={{width:74, padding:'7px 4px', fontSize:11}} title="Ora fine (opzionale)" />
+                  </div>
+                )}
               </div>
-              <select className="input-field" value={form.tipo}
-                onChange={e=>setForm(f=>({...f,tipo:e.target.value}))}>
-                {Object.entries(TIPI_EVENTO).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-              </select>
-              {form.tipo==='permesso'&&(
+
+              {formMode === 'evento' && (
+                <select className="input-field" value={form.tipo}
+                  onChange={e=>setForm(f=>({...f,tipo:e.target.value}))}>
+                  {Object.entries(TIPI_EVENTO).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                </select>
+              )}
+
+              {form.tipo==='permesso' && (
                 <div style={{display:'flex',alignItems:'center',gap:7}}>
-                  <span style={{fontSize:11,color:'var(--t3)',whiteSpace:'nowrap'}}>Ore:</span>
+                  <span style={{fontSize:11,color:'var(--t3)',whiteSpace:'nowrap'}}>Ore di permesso:</span>
                   <input className="input-field" type="number" min="1" max="8" value={form.ore}
                     onChange={e=>setForm(f=>({...f,ore:e.target.value}))} style={{maxWidth:70}} />
                 </div>
               )}
-              <input className="input-field" placeholder="Note (opz.)" value={form.note}
+
+              <input className="input-field" placeholder="Note aggiuntive (opz.)" value={form.note}
                 onChange={e=>setForm(f=>({...f,note:e.target.value}))} />
+
+              {/* Allegati */}
+              <div style={{ marginTop:4 }}>
+                <div style={{ fontSize:11, color:'var(--t3)', marginBottom:6 }}>Allegati e Documenti</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                  {form.allegati?.map((file, i) => (
+                    <div key={file.id} style={{ fontSize:10, background:'var(--sf2)', padding:'4px 8px', borderRadius:6, display:'flex', alignItems:'center', gap:6, border:'1px solid var(--bd)' }}>
+                      <span style={{ maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{file.name}</span>
+                      <button onClick={() => handleRemoveFile(file.id, i)} style={{ border:'none', background:'none', color:'var(--rd)', cursor:'pointer', padding:0 }}>✕</button>
+                    </div>
+                  ))}
+                  <label style={{ cursor:'pointer', fontSize:10, color:'var(--ac)', background:'var(--ac-bg)', padding:'4px 8px', borderRadius:6, border:'1px dashed var(--ac)' }}>
+                    + Carica file
+                    <input type="file" style={{ display:'none' }} onChange={handleFileUpload} />
+                  </label>
+                </div>
+              </div>
+
               <InputRow>
                 <button className="btn-ghost" onClick={()=>setFormOpen(false)}>Annulla</button>
-                <button className="btn-accent" onClick={handleAdd}>Salva</button>
+                <button className="btn-accent" onClick={handleAdd} style={{ background:formMode==='assenza'?'var(--rd)':undefined }}>
+                  {formMode==='assenza' ? 'Registra Assenza' : 'Salva Evento'}
+                </button>
               </InputRow>
             </FormPanel>
 
             {allSelected.length===0&&!formOpen
               ? <EmptyState message={selected?'Nessun evento':'Clicca un giorno'} />
               : allSelected.map((item,i)=>{
-                const isStudy= !!item.corsoNome
-                const isGoal = item.id?.toString().startsWith('goal-')
-                const color  = isGoal?'#7A5FA0':isStudy?STUDIO_COLOR:(TIPI_EVENTO[item.tipo]?.color||'#888')
-                const badge  = isGoal?'Scadenza':isStudy?item.corsoNome:(TIPI_EVENTO[item.tipo]?.label||item.tipo)
+                const isAssenza = item.isAssenza
+                const motivazione = isAssenza ? motivazioni.find(m=>m.id===item.tipo) : null
+                const color  = isGoal?'#7A5FA0':isStudy?STUDIO_COLOR:isAssenza?(motivazione?.colore||'var(--rd)'):(TIPI_EVENTO[item.tipo]?.color||'#888')
+                const badge  = isGoal?'Scadenza':isStudy?item.corsoNome:isAssenza?(motivazione?.label||'Assenza'):(TIPI_EVENTO[item.tipo]?.label||item.tipo)
+                const icon   = isAssenza ? (motivazione?.icon || '🚫') : null
+
                 return (
                   <div key={item.id||i} style={{marginBottom:7,padding:'8px 10px',background:color+'11',borderLeft:`3px solid ${color}`,borderRadius:'0 7px 7px 0',animation:'slideDown .14s ease'}}>
                     <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:4}}>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:500}}>{item.titolo}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{fontSize:13,fontWeight:600, display:'flex', alignItems:'center', gap:6}}>
+                          {icon && <span style={{ fontSize:16 }}>{icon}</span>}
+                          {item.titolo}
+                        </div>
                         <div style={{display:'flex',gap:5,marginTop:3,flexWrap:'wrap',alignItems:'center'}}>
                           {(item.ora||item.oraPianificata)&&(
                             <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:'var(--t3)'}}>
@@ -375,8 +464,22 @@ export default function Calendario() {
                           {isStudy&&<span style={{fontSize:10,color:'var(--t3)'}}>{item.durata_minuti}min</span>}
                         </div>
                         {item.note&&<div style={{fontSize:11,color:'var(--t3)',marginTop:3}}>{item.note}</div>}
+                        
+                        {/* Elenco Allegati Salva/Download */}
+                        {item.allegati?.length > 0 && (
+                          <div style={{ marginTop:6, display:'flex', flexWrap:'wrap', gap:4 }}>
+                            {item.allegati.map(file => (
+                              <button key={file.id} onClick={() => handleDownloadFile(file.id, file.name)} 
+                                style={{ fontSize:9, background:'var(--sf)', border:'1px solid var(--bd)', borderRadius:4, padding:'2px 6px', cursor:'pointer', color:'var(--t2)', display:'flex', alignItems:'center', gap:4 }}>
+                                📎 {file.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {!isStudy&&!isGoal&&<button className="btn-danger" onClick={()=>handleRemove(item.id)} style={{flexShrink:0}}>✕</button>}
+                      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                        {!isStudy&&!isGoal&&<button className="btn-danger" onClick={()=>handleRemove(item.id)} style={{flexShrink:0, padding:'2px 6px'}}>✕</button>}
+                      </div>
                     </div>
                   </div>
                 )
