@@ -54,6 +54,8 @@ function HamburgerBtn({ onClick }) {
   )
 }
 
+import FirmeReminder from './components/layout/FirmeReminder'
+
 function AppInner() {
   const { settings, update } = useImpostazioni()
   const theme = settings.theme || 'light'
@@ -113,6 +115,7 @@ function AppInner() {
           </Routes>
         </Suspense>
       </main>
+      <FirmeReminder />
       <GlobalModal />
     </div>
   )
