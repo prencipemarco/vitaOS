@@ -152,7 +152,7 @@ export default function FoglioDiFirme() {
                     </div>
                   </div>
                   <span style={{ fontSize:14,fontFamily:"'DM Mono',monospace",color:'var(--ac)',fontWeight:600,marginRight:8 }}>
-                    {calcOre(f).toFixed(1)}h
+                    {calcOre(f).toFixed(2)}h
                   </span>
                   <button className="btn-danger" onClick={() => handleRemove(f)}>✕</button>
                 </div>

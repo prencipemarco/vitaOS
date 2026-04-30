@@ -30,7 +30,7 @@ export function useFirme() {
     const inM = timeToMin(firma.entrata)
     const outM = timeToMin(firma.uscita)
     if (outM <= inM) return { error: 'Orario uscita deve essere dopo entrata' }
-    const id = Date.now()
+    const id = crypto.randomUUID?.() || Date.now() + Math.random()
     setFirme(prev => [...prev, { data: firma.data, entrata: firma.entrata, uscita: firma.uscita, id }])
     return { success: true, id }
   }
