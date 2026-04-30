@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useFinanze, CATEGORIE_USCITE, CATEGORIE_ENTRATE } from '../hooks/useFinanze'
-import { PageHeader, Grid, SectionHeader, FormPanel, InputRow, Dot, MonthNav, EmptyState, showError, showConfirm, showSuccess, OnboardingModal } from '../components/ui'
+import { PageHeader, Grid, SectionHeader, FormPanel, InputRow, Dot, MonthNav, EmptyState, showError, showConfirm, showSuccess, OnboardingModal, Modal } from '../components/ui'
 import { formatCurrency, formatCurrencyDec, formatShort } from '../utils/dateHelpers'
 
 const COLORS = ['#C46A3C','#3A5F8A','#3A7059','#7A5FA0','#B07040','#A04545','#5A8A6A','#888']
@@ -34,11 +34,13 @@ export default function Finanze() {
   const [month, setMonth] = useState(now.getMonth())
   const [txOpen, setTxOpen] = useState(false)
   const [prevOpen, setPrevOpen] = useState(false)
-  const [form, setForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',data:now.toISOString().slice(0,10) })
-  const [prevForm, setPrevForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',ricorrente:false,mese:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}` })
+  const [splitOpen, setSplitOpen] = useState(false)
+  const [form, setForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',data:now.toISOString().slice(0,10), account: 'bank' })
+  const [prevForm, setPrevForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',ricorrente:false,mese:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, account: 'bank' })
+  const [splitForm, setSplitForm] = useState({ cash: '', bank: '' })
 
   const { transazioni,addTransazione,removeTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,
-    getSaldoDisponibile,previste,addPrevista,removePrevista,updatePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
+    getSaldoDisponibile,getSaldoDettagliato,distribuisciSaldo,previste,addPrevista,removePrevista,updatePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
 
   const [editingPrevId, setEditingPrevId] = useState(null)
   const [editPrevForm, setEditPrevForm] = useState(null)
@@ -77,7 +79,8 @@ export default function Finanze() {
   const monthTx = forMonth(year, month).sort((a,b)=>b.data.localeCompare(a.data))
   const monthPrev = previsteDelMese(year, month)
   const totPrev = totalePrevisteMese(year, month)
-  const saldoDisponibile = getSaldoDisponibile()
+  const saldi = getSaldoDettagliato()
+  const saldoDisponibile = saldi.totale
   const nettoConPreviste = fin.netto + totPrev.entrate - totPrev.uscite
 
   const cats = form.tipo==='uscita'?CATEGORIE_USCITE:CATEGORIE_ENTRATE
@@ -93,8 +96,19 @@ export default function Finanze() {
     }
     addTransazione(form)
     showSuccess(`Transazione aggiunta: ${form.tipo==='entrata'?'+':'-'}${formatCurrency(importo)}`)
-    setForm({ desc:'',importo:'',tipo:'uscita',cat:'Altro',data:now.toISOString().slice(0,10) })
+    setForm({ desc:'',importo:'',tipo:'uscita',cat:'Altro',data:now.toISOString().slice(0,10), account: 'bank' })
     setTxOpen(false)
+  }
+
+  const handleOpenSplit = () => {
+    setSplitForm({ cash: saldi.cash, bank: saldi.bank })
+    setSplitOpen(true)
+  }
+
+  const handleSaveSplit = () => {
+    distribuisciSaldo(parseFloat(splitForm.cash)||0, parseFloat(splitForm.bank)||0)
+    setSplitOpen(false)
+    showSuccess('Liquidità suddivisa correttamente.')
   }
 
   const handleRemoveTx = (tx) => {
@@ -126,8 +140,16 @@ export default function Finanze() {
       <div style={{ display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:20 }}>
         <PageHeader label="finanze" title="Gestione Economica" />
         <div style={{ display:'flex',alignItems:'center',gap:12,paddingBottom:2 }}>
-          <div style={{ fontSize:12,color:'var(--t2)',fontFamily:"'DM Mono',monospace" }}>
-            saldo disponibile: <span style={{ color:saldoDisponibile>=0?'var(--go)':'var(--rd)',fontWeight:600 }}>{formatCurrency(saldoDisponibile)}</span>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+            <div style={{ fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'.05em' }}>saldo disponibile</div>
+            <div style={{ fontSize:16, fontWeight:700, color:saldoDisponibile>=0?'var(--go)':'var(--rd)', fontFamily:"'DM Mono',monospace" }}>
+              {formatCurrency(saldoDisponibile)}
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:2 }}>
+              <div style={{ fontSize:10, color:'var(--t2)' }}>Conto: <span style={{ fontWeight:600 }}>{formatCurrency(saldi.bank)}</span></div>
+              <div style={{ fontSize:10, color:'var(--t2)' }}>Contanti: <span style={{ fontWeight:600 }}>{formatCurrency(saldi.cash)}</span></div>
+              <button onClick={handleOpenSplit} style={{ fontSize:10, color:'var(--ac)', background:'none', border:'none', padding:0, cursor:'pointer', fontWeight:600 }}>[ Dividi ]</button>
+            </div>
           </div>
           <MonthNav year={year} month={month} onChange={(y,m)=>{ setYear(y);setMonth(m) }} />
         </div>
@@ -212,11 +234,15 @@ export default function Finanze() {
                 onChange={e=>setForm(f=>({...f,importo:e.target.value}))} style={{ maxWidth:90 }} />
             </InputRow>
             <InputRow>
+              <select className="input-field" value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value}))} style={{ flex:0.4 }}>
+                <option value="bank">🏦 Conto</option>
+                <option value="cash">💵 Contanti</option>
+              </select>
               <select className="input-field" value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))}>
                 {cats.map(c=><option key={c}>{c}</option>)}
               </select>
               <input className="input-field" type="date" value={form.data}
-                onChange={e=>setForm(f=>({...f,data:e.target.value}))} style={{ maxWidth:140 }} />
+                onChange={e=>setForm(f=>({...f,data:e.target.value}))} style={{ maxWidth:120 }} />
             </InputRow>
             {form.tipo==='uscita'&&saldoDisponibile<(parseFloat(form.importo)||0)&&(parseFloat(form.importo)||0)>0&&(
               <div style={{ fontSize:11,color:'var(--rd)',padding:'5px 8px',background:'rgba(160,69,69,.07)',borderRadius:6 }}>
@@ -238,6 +264,9 @@ export default function Finanze() {
                 </div>
                 <span style={{ fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,marginRight:8,color:tx.tipo==='entrata'?'var(--go)':'var(--rd)' }}>
                   {tx.tipo==='entrata'?'+':'-'}{formatCurrencyDec(tx.importo)}
+                </span>
+                <span style={{ fontSize:14, marginRight:8 }} title={tx.account==='cash'?'Contanti':'Conto'}>
+                  {tx.account==='cash'?'💵':'🏦'}
                 </span>
                 <button className="btn-danger" onClick={()=>handleRemoveTx(tx)}>✕</button>
               </div>
@@ -350,6 +379,47 @@ export default function Finanze() {
           </div>
         </div>
       </div>
+
+      <Modal open={splitOpen} title="Suddividi Liquidità" onClose={() => setSplitOpen(false)}>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ padding:'12px', background:'var(--sf2)', borderRadius:10, textAlign:'center' }}>
+            <div style={{ fontSize:11, color:'var(--t3)', textTransform:'uppercase', marginBottom:4 }}>Totale Attuale</div>
+            <div style={{ fontSize:24, fontWeight:700, fontFamily:"'DM Mono',monospace" }}>{formatCurrency(saldoDisponibile)}</div>
+          </div>
+          
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div>
+              <label style={{ fontSize:12, color:'var(--t2)', display:'block', marginBottom:6 }}>🏦 Soldi sul Conto</label>
+              <input 
+                className="input-field" 
+                type="number" 
+                value={splitForm.bank} 
+                onChange={e => setSplitForm({ ...splitForm, bank: e.target.value })} 
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label style={{ fontSize:12, color:'var(--t2)', display:'block', marginBottom:6 }}>💵 Contanti</label>
+              <input 
+                className="input-field" 
+                type="number" 
+                value={splitForm.cash} 
+                onChange={e => setSplitForm({ ...splitForm, cash: e.target.value })} 
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div style={{ fontSize:11, color:Math.abs(saldoDisponibile - ((parseFloat(splitForm.cash)||0) + (parseFloat(splitForm.bank)||0))) > 0.01 ? 'var(--rd)' : 'var(--go)', textAlign:'center', marginTop:4 }}>
+            Somma inserita: {formatCurrency((parseFloat(splitForm.cash)||0) + (parseFloat(splitForm.bank)||0))}
+          </div>
+
+          <div style={{ display:'flex', gap:10, marginTop:10 }}>
+            <button className="btn-ghost" style={{ flex:1 }} onClick={() => setSplitOpen(false)}>Annulla</button>
+            <button className="btn-accent" style={{ flex:1 }} onClick={handleSaveSplit}>Salva Divisione</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

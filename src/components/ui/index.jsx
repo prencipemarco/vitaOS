@@ -167,6 +167,32 @@ export function showSuccess(message) {
   if (_showModal) _showModal({ type:'success', message })
 }
 
+export function Modal({ open, title, onClose, children }) {
+  if (!open) return null
+  return createPortal(
+    <div style={{
+      position:'fixed', inset:0, zIndex:100000,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      background:'rgba(0,0,0,.4)', backdropFilter:'blur(4px)',
+      animation:'fadeIn .2s ease'
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background:'var(--sf)', border:'1px solid var(--bd2)', borderRadius:16,
+        padding:'24px', maxWidth:400, width:'92%',
+        boxShadow:'0 20px 60px rgba(0,0,0,.3)',
+        animation:'cardIn .3s cubic-bezier(.4,0,.2,1)',
+      }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+          <div style={{ fontSize:18, fontWeight:700, letterSpacing:'-.02em' }}>{title}</div>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'var(--t3)' }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 /* ─── Onboarding Modal ─── */
 export function OnboardingModal({ sectionId, title, description, icon='✨' }) {
   const [open, setOpen] = useState(false)

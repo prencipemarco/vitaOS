@@ -7,16 +7,66 @@ export function useFinanze() {
   const [transazioni, setTransazioni] = useLocalStorage('wl_finanze', [])
   const [previste, setPreviste] = useLocalStorage('wl_finanze_previste', [])
 
-  const getSaldoDisponibile = () => {
-    const entrate = transazioni.filter(t=>t.tipo==='entrata').reduce((s,t)=>s+t.importo,0)
-    const uscite  = transazioni.filter(t=>t.tipo==='uscita').reduce((s,t)=>s+t.importo,0)
-    return Math.round((entrate - uscite)*100)/100
+  const getSaldoDettagliato = () => {
+    let bank = 0
+    let cash = 0
+    transazioni.forEach(t => {
+      const val = t.tipo === 'entrata' ? t.importo : -t.importo
+      if (t.account === 'cash') cash += val
+      else bank += val // default 'bank' per transazioni vecchie
+    })
+    return { 
+      bank: Math.round(bank * 100) / 100, 
+      cash: Math.round(cash * 100) / 100, 
+      totale: Math.round((bank + cash) * 100) / 100 
+    }
   }
+
+  const getSaldoDisponibile = () => getSaldoDettagliato().totale
 
   const addTransazione = (tx) => {
     const id = Date.now()
-    setTransazioni(prev => [...prev, { ...tx, id, importo: parseFloat(tx.importo) }])
+    setTransazioni(prev => [...prev, { 
+      ...tx, 
+      id, 
+      importo: parseFloat(tx.importo),
+      account: tx.account || 'bank'
+    }])
     return id
+  }
+
+  const distribuisciSaldo = (nuovoCash, nuovoBank) => {
+    const { cash: currentCash, bank: currentBank } = getSaldoDettagliato()
+    const diffCash = nuovoCash - currentCash
+    const diffBank = nuovoBank - currentBank
+    
+    const nuoveTx = []
+    if (Math.abs(diffCash) > 0.01) {
+      nuoveTx.push({
+        id: Date.now(),
+        desc: 'Rettifica saldo iniziale (Contanti)',
+        importo: Math.abs(diffCash),
+        tipo: diffCash > 0 ? 'entrata' : 'uscita',
+        cat: 'Altro',
+        account: 'cash',
+        data: new Date().toISOString().slice(0, 10)
+      })
+    }
+    if (Math.abs(diffBank) > 0.01) {
+      nuoveTx.push({
+        id: Date.now() + 1,
+        desc: 'Rettifica saldo iniziale (Conto)',
+        importo: Math.abs(diffBank),
+        tipo: diffBank > 0 ? 'entrata' : 'uscita',
+        cat: 'Altro',
+        account: 'bank',
+        data: new Date().toISOString().slice(0, 10)
+      })
+    }
+    
+    if (nuoveTx.length > 0) {
+      setTransazioni(prev => [...prev, ...nuoveTx])
+    }
   }
 
   const removeTransazione = (id) =>
@@ -96,7 +146,7 @@ export function useFinanze() {
 
   return {
     transazioni, addTransazione, removeTransazione,
-    getSaldoDisponibile,
+    getSaldoDisponibile, getSaldoDettagliato, distribuisciSaldo,
     forMonth, riepilogo, perCategoria, andamentoMesi,
     previste, addPrevista, removePrevista, updatePrevista, confirmPrevista, previsteDelMese, totalePrevisteMese,
   }
