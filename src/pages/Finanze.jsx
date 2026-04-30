@@ -8,6 +8,22 @@ const COLORS = ['#C46A3C','#3A5F8A','#3A7059','#7A5FA0','#B07040','#A04545','#5A
 const PieTip = ({ active,payload }) => !active||!payload?.length?null:<div style={{ background:'var(--sf)',border:'1px solid var(--bd2)',borderRadius:8,padding:'8px 12px',fontSize:12 }}><div style={{ color:'var(--t2)',marginBottom:3 }}>{payload[0].name}</div><div style={{ color:'var(--ac)',fontFamily:"'DM Mono',monospace",fontWeight:600 }}>{formatCurrency(payload[0].value)}</div></div>
 const LineTip = ({ active,payload,label }) => !active||!payload?.length?null:<div style={{ background:'var(--sf)',border:'1px solid var(--bd2)',borderRadius:8,padding:'8px 12px',fontSize:12 }}><div style={{ color:'var(--t3)',marginBottom:4 }}>{label}</div>{payload.map(p=><div key={p.name} style={{ color:p.color,fontFamily:"'DM Mono',monospace" }}>{p.name}: {formatCurrency(p.value)}</div>)}</div>
 
+const Svg = ({ d, size=14, style }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, ...style }}>
+    <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
+
+const ICONS = {
+  bank:   "M1.5 12.5h11M1.5 5.5l5.5-4 5.5 4M3 12.5V5.5M11 12.5V5.5M7 12.5V5.5M5 12.5V5.5M9 12.5V5.5",
+  cash:   "M1 4h12a1 1 0 011 1v4a1 1 0 01-1 1H1a1 1 0 01-1-1V5a1 1 0 011-1zM7 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3z",
+  edit:   "M1 10.5v2.5h2.5l7-7-2.5-2.5-7 7zM11 3.5l1.5 1.5",
+  trash:  "M2 3.5h10M4 3.5v-1a1 1 0 011-1h4a1 1 0 011 1v1M5 6v4M9 6v4M2.5 3.5l1 9a1 1 0 001 1h5a1 1 0 001-1l1-9",
+  check:  "M1.5 7.5l3.5 3.5 7.5-8.5",
+  close:  "M2 2l10 10M12 2L2 12",
+  config: "M7 5a2 2 0 100 4 2 2 0 000-4zM7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.6 2.6l1 1M10.4 10.4l1 1M11.4 2.6l-1 1M3.6 10.4l-1 1",
+}
+
 function TipoSwitch({ value, onChange }) {
   return (
     <div className="tipo-switch">
@@ -39,9 +55,11 @@ export default function Finanze() {
   const [prevForm, setPrevForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',ricorrente:false,mese:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, account: 'bank' })
   const [splitForm, setSplitForm] = useState({ cash: '', bank: '' })
 
-  const { transazioni,addTransazione,removeTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,
+  const { transazioni,addTransazione,removeTransazione,updateTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,
     getSaldoDisponibile,getSaldoDettagliato,distribuisciSaldo,previste,addPrevista,removePrevista,updatePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
 
+  const [editingTxId, setEditingTxId] = useState(null)
+  const [editTxForm, setEditTxForm] = useState(null)
   const [editingPrevId, setEditingPrevId] = useState(null)
   const [editPrevForm, setEditPrevForm] = useState(null)
   const [confirmingPrevId, setConfirmingPrevId] = useState(null)
@@ -71,6 +89,18 @@ export default function Finanze() {
     setConfirmingPrevId(null)
     setConfirmPrevForm(null)
     showSuccess(`Confermata: ${confirmPrevForm.desc}`)
+  }
+
+  const handleEditTx = (tx) => {
+    setEditingTxId(tx.id)
+    setEditTxForm({ ...tx })
+  }
+
+  const handleSaveEditTx = () => {
+    updateTransazione(editingTxId, editTxForm)
+    setEditingTxId(null)
+    setEditTxForm(null)
+    showSuccess('Transazione aggiornata.')
   }
 
   const fin = riepilogo(year, month)
@@ -235,8 +265,8 @@ export default function Finanze() {
             </InputRow>
             <InputRow>
               <select className="input-field" value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value}))} style={{ flex:0.4 }}>
-                <option value="bank">🏦 Conto</option>
-                <option value="cash">💵 Contanti</option>
+                <option value="bank">Conto</option>
+                <option value="cash">Contanti</option>
               </select>
               <select className="input-field" value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))}>
                 {cats.map(c=><option key={c}>{c}</option>)}
@@ -256,21 +286,56 @@ export default function Finanze() {
           </TxFormBox>
           <div style={{ maxHeight:340,overflowY:'auto',marginTop:txOpen?8:0 }}>
             {monthTx.length===0&&!txOpen?<EmptyState message="Nessuna transazione" />
-            :monthTx.map(tx=>(
-              <div key={tx.id} className="row-item">
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13,fontWeight:500 }}>{tx.desc}</div>
-                  <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace" }}>{tx.cat} · {formatShort(tx.data)}</div>
+            :monthTx.map(tx=>{
+              const isEditing = editingTxId === tx.id
+              const editCats = editTxForm?.tipo === 'entrata' ? CATEGORIE_ENTRATE : CATEGORIE_USCITE
+
+              if (isEditing) return (
+                <div key={tx.id} className="row-item" style={{ flexDirection:'column', alignItems:'stretch', gap:8, background:'var(--ac-bg)', borderRadius:8, padding:10, marginBottom:8 }}>
+                  <TipoSwitch value={editTxForm.tipo} onChange={v=>setEditTxForm(f=>({...f,tipo:v,cat:'Altro'}))} />
+                  <InputRow>
+                    <input className="input-field" value={editTxForm.desc} onChange={e=>setEditTxForm({...editTxForm, desc:e.target.value})} />
+                    <input className="input-field" type="number" value={editTxForm.importo} onChange={e=>setEditTxForm({...editTxForm, importo:e.target.value})} style={{ maxWidth:80 }} />
+                  </InputRow>
+                  <InputRow>
+                    <select className="input-field" value={editTxForm.account} onChange={e=>setEditTxForm({...editTxForm, account:e.target.value})} style={{ flex:0.4 }}>
+                      <option value="bank">Conto</option>
+                      <option value="cash">Contanti</option>
+                    </select>
+                    <select className="input-field" value={editTxForm.cat} onChange={e=>setEditTxForm({...editTxForm, cat:e.target.value})}>
+                      {editCats.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  </InputRow>
+                  <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                    <button className="btn-ghost" onClick={() => setEditingTxId(null)}>Annulla</button>
+                    <button className="btn-accent" onClick={handleSaveEditTx}>Salva</button>
+                  </div>
                 </div>
-                <span style={{ fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,marginRight:8,color:tx.tipo==='entrata'?'var(--go)':'var(--rd)' }}>
-                  {tx.tipo==='entrata'?'+':'-'}{formatCurrencyDec(tx.importo)}
-                </span>
-                <span style={{ fontSize:14, marginRight:8 }} title={tx.account==='cash'?'Contanti':'Conto'}>
-                  {tx.account==='cash'?'💵':'🏦'}
-                </span>
-                <button className="btn-danger" onClick={()=>handleRemoveTx(tx)}>✕</button>
-              </div>
-            ))}
+              )
+
+              return (
+                <div key={tx.id} className="row-item">
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13,fontWeight:500 }}>{tx.desc}</div>
+                    <div style={{ fontSize:11,color:'var(--t2)',fontFamily:"'DM Mono',monospace" }}>{tx.cat} · {formatShort(tx.data)}</div>
+                  </div>
+                  <span style={{ fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,marginRight:8,color:tx.tipo==='entrata'?'var(--go)':'var(--rd)' }}>
+                    {tx.tipo==='entrata'?'+':'-'}{formatCurrencyDec(tx.importo)}
+                  </span>
+                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                    <div title={tx.account==='cash'?'Contanti':'Conto'} style={{ color:'var(--t3)', display:'flex' }}>
+                      <Svg d={tx.account==='cash'?ICONS.cash:ICONS.bank} size={14} />
+                    </div>
+                    <button className="btn-ghost" title="Modifica" style={{ padding:4, opacity:0.6 }} onClick={() => handleEditTx(tx)}>
+                      <Svg d={ICONS.edit} size={13} />
+                    </button>
+                    <button className="btn-danger" style={{ padding:4 }} onClick={()=>handleRemoveTx(tx)}>
+                      <Svg d={ICONS.close} size={12} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -362,16 +427,18 @@ export default function Finanze() {
                   </span>
                   <div style={{ display:'flex', gap:6 }}>
                     <button className="btn-ghost" title="Modifica"
-                      style={{ padding:'4px 7px', fontSize:11, opacity:0.7 }}
+                      style={{ padding:'4px 7px', opacity:0.7 }}
                       onClick={() => handleEditPrev(p)}>
-                      ⚙️
+                      <Svg d={ICONS.config} size={12} />
                     </button>
                     <button className="btn-ghost" title="Conferma come transazione effettiva"
-                      style={{ padding:'4px 7px', borderColor:'var(--go)', color:'var(--go)', fontSize:11 }}
+                      style={{ padding:'4px 7px', borderColor:'var(--go)', color:'var(--go)' }}
                       onClick={() => handleConfirmStart(p)}>
-                      ✓
+                      <Svg d={ICONS.check} size={12} />
                     </button>
-                    <button className="btn-danger" onClick={()=>handleRemovePrev(p)}>✕</button>
+                    <button className="btn-danger" style={{ padding:'4px 7px' }} onClick={()=>handleRemovePrev(p)}>
+                      <Svg d={ICONS.close} size={12} />
+                    </button>
                   </div>
                 </div>
               )
@@ -389,24 +456,32 @@ export default function Finanze() {
           
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div>
-              <label style={{ fontSize:12, color:'var(--t2)', display:'block', marginBottom:6 }}>🏦 Soldi sul Conto</label>
-              <input 
-                className="input-field" 
-                type="number" 
-                value={splitForm.bank} 
-                onChange={e => setSplitForm({ ...splitForm, bank: e.target.value })} 
-                placeholder="0.00"
-              />
+              <label style={{ fontSize:12, color:'var(--t2)', display:'block', marginBottom:6 }}>Soldi sul Conto</label>
+              <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
+                <Svg d={ICONS.bank} style={{ position:'absolute', left:10, color:'var(--t3)' }} />
+                <input 
+                  className="input-field" 
+                  type="number" 
+                  value={splitForm.bank} 
+                  onChange={e => setSplitForm({ ...splitForm, bank: e.target.value })} 
+                  placeholder="0.00"
+                  style={{ paddingLeft:32 }}
+                />
+              </div>
             </div>
             <div>
-              <label style={{ fontSize:12, color:'var(--t2)', display:'block', marginBottom:6 }}>💵 Contanti</label>
-              <input 
-                className="input-field" 
-                type="number" 
-                value={splitForm.cash} 
-                onChange={e => setSplitForm({ ...splitForm, cash: e.target.value })} 
-                placeholder="0.00"
-              />
+              <label style={{ fontSize:12, color:'var(--t2)', display:'block', marginBottom:6 }}>Contanti</label>
+              <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
+                <Svg d={ICONS.cash} style={{ position:'absolute', left:10, color:'var(--t3)' }} />
+                <input 
+                  className="input-field" 
+                  type="number" 
+                  value={splitForm.cash} 
+                  onChange={e => setSplitForm({ ...splitForm, cash: e.target.value })} 
+                  placeholder="0.00"
+                  style={{ paddingLeft:32 }}
+                />
+              </div>
             </div>
           </div>
 

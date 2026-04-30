@@ -72,6 +72,10 @@ export function useFinanze() {
   const removeTransazione = (id) =>
     setTransazioni(prev => prev.filter(t => t.id !== id))
 
+  const updateTransazione = (id, patch) => {
+    setTransazioni(prev => prev.map(t => t.id === id ? { ...t, ...patch, importo: patch.importo !== undefined ? parseFloat(patch.importo) : t.importo } : t))
+  }
+
   const forMonth = (year, month) =>
     transazioni.filter(t => {
       const d = new Date(t.data+'T12:00')
@@ -145,7 +149,7 @@ export function useFinanze() {
   }
 
   return {
-    transazioni, addTransazione, removeTransazione,
+    transazioni, addTransazione, removeTransazione, updateTransazione,
     getSaldoDisponibile, getSaldoDettagliato, distribuisciSaldo,
     forMonth, riepilogo, perCategoria, andamentoMesi,
     previste, addPrevista, removePrevista, updatePrevista, confirmPrevista, previsteDelMese, totalePrevisteMese,
