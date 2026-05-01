@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { 
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, 
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area
+} from 'recharts'
 import { useFinanze, CATEGORIE_USCITE, CATEGORIE_ENTRATE } from '../hooks/useFinanze'
 import { PageHeader, Grid, SectionHeader, FormPanel, InputRow, Dot, MonthNav, EmptyState, showError, showConfirm, showSuccess, OnboardingModal, Modal } from '../components/ui'
 import { formatCurrency, formatCurrencyDec, formatShort } from '../utils/dateHelpers'
@@ -55,7 +59,7 @@ export default function Finanze() {
   const [prevForm, setPrevForm] = useState({ desc:'',importo:'',tipo:'uscita',cat:'Altro',ricorrente:false,mese:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, account: 'bank' })
   const [splitForm, setSplitForm] = useState({ cash: '', bank: '' })
 
-  const { transazioni,addTransazione,removeTransazione,updateTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,
+  const { transazioni,addTransazione,removeTransazione,updateTransazione,forMonth,riepilogo,perCategoria,andamentoMesi,andamentoSaldoStorico,
     getSaldoDisponibile,getSaldoDettagliato,distribuisciSaldo,previste,addPrevista,removePrevista,updatePrevista,confirmPrevista,previsteDelMese,totalePrevisteMese } = useFinanze()
 
   const [editingTxId, setEditingTxId] = useState(null)
@@ -106,6 +110,7 @@ export default function Finanze() {
   const fin = riepilogo(year, month)
   const catData = perCategoria(year, month)
   const andamento = andamentoMesi()
+  const andamentoSaldo = andamentoSaldoStorico()
   const monthTx = forMonth(year, month).sort((a,b)=>b.data.localeCompare(a.data))
   const monthPrev = previsteDelMese(year, month)
   const totPrev = totalePrevisteMese(year, month)
@@ -201,7 +206,7 @@ export default function Finanze() {
       </div>
 
       {/* Charts */}
-      <div style={{ display:'grid',gridTemplateColumns:'1fr 1.4fr',gap:12,marginBottom:12 }}>
+      <div style={{ display:'grid',gridTemplateColumns:'1.1fr 1.5fr 1.5fr',gap:12,marginBottom:12 }}>
         <div className="card card-5">
           <div className="label-xs" style={{ marginBottom:12 }}>spese per categoria</div>
           {catData.length===0?<EmptyState message="Nessuna spesa registrata" />:(
@@ -222,7 +227,6 @@ export default function Finanze() {
                     <Dot color={COLORS[i%COLORS.length]} />
                     <span style={{ flex:1,fontSize:12 }}>{c.name}</span>
                     <span style={{ fontSize:12,fontFamily:"'DM Mono',monospace",color:'var(--t2)' }}>{formatCurrency(c.value)}</span>
-                    <span style={{ fontSize:10,color:'var(--t3)',minWidth:26,textAlign:'right' }}>{fin.uscite?Math.round(c.value/fin.uscite*100):0}%</span>
                   </div>
                 ))}
               </div>
@@ -230,17 +234,34 @@ export default function Finanze() {
           )}
         </div>
         <div className="card card-6">
-          <div className="label-xs" style={{ marginBottom:12 }}>andamento 6 mesi</div>
+          <div className="label-xs" style={{ marginBottom:12 }}>entrate vs uscite</div>
           <ResponsiveContainer width="100%" height={218}>
             <LineChart data={andamento} margin={{ top:4,right:8,bottom:0,left:0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--bd)" />
-              <XAxis dataKey="mese" tick={{ fontSize:11,fill:'var(--t2)',fontFamily:"'DM Mono'" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize:11,fill:'var(--t2)',fontFamily:"'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} width={36} />
+              <XAxis dataKey="mese" tick={{ fontSize:10,fill:'var(--t2)',fontFamily:"'DM Mono'" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize:10,fill:'var(--t2)',fontFamily:"'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} width={30} />
               <Tooltip content={<LineTip />} />
-              <Line type="monotone" dataKey="entrate" stroke="var(--go)" strokeWidth={1.5} dot={{ r:2 }} name="Entrate" />
-              <Line type="monotone" dataKey="uscite" stroke="var(--rd)" strokeWidth={1.5} dot={{ r:2 }} name="Uscite" strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="netto" stroke="var(--ac)" strokeWidth={1.5} dot={{ r:2 }} name="Netto" />
+              <Line type="monotone" dataKey="entrate" stroke="var(--go)" strokeWidth={2} dot={{ r:3 }} name="Entrate" />
+              <Line type="monotone" dataKey="uscite" stroke="var(--rd)" strokeWidth={2} dot={{ r:3 }} name="Uscite" strokeDasharray="4 2" />
             </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card card-7">
+          <div className="label-xs" style={{ marginBottom:12 }}>andamento patrimonio</div>
+          <ResponsiveContainer width="100%" height={218}>
+            <AreaChart data={andamentoSaldo} margin={{ top:4,right:8,bottom:0,left:0 }}>
+              <defs>
+                <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--ac)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--ac)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--bd)" vertical={false} />
+              <XAxis dataKey="mese" tick={{ fontSize:10,fill:'var(--t2)',fontFamily:"'DM Mono'" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize:10,fill:'var(--t2)',fontFamily:"'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v=>`€${(v/1000).toFixed(0)}k`} width={30} />
+              <Tooltip content={<LineTip />} />
+              <Area type="monotone" dataKey="saldo" stroke="var(--ac)" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} name="Saldo Totale" />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

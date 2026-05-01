@@ -31,7 +31,7 @@ export default function Dashboard() {
   const isMobile = useIsMobile()
 
   const { eventsForDate } = useCalendario()
-  const { riepilogo, andamentoMesi, totalePrevisteMese } = useFinanze()
+  const { getSaldoDisponibile, getSaldoDettagliato, andamentoMesi, totalePrevisteMese, riepilogo } = useFinanze()
   const { goals, totaleRisparmi } = useRisparmi()
   const { totaleOre } = useFirme()
   const { settings, tariffaCalcolata, reddtitoMedioMensile, getPalestraBlockGiorno, oreContrattualiMensili } = useImpostazioni()
@@ -51,6 +51,11 @@ export default function Dashboard() {
   const redditoMedio = reddtitoMedioMensile()
   const studyToday = getTodayTasks()
   const lateCount = getLateTasksCount()
+  
+  const saldi = getSaldoDettagliato()
+  const liquidita = saldi.totale
+  const risparmiAccantonati = totaleRisparmi()
+  const patrimonioTotale = liquidita + risparmiAccantonati
 
   const giornoSaluteOggi = schedaSalute[todayDow] || {}
   const gymBlock = getPalestraBlockGiorno(todayDow)
@@ -125,10 +130,10 @@ export default function Dashboard() {
       {/* KPI 4 colonne → 2 su mobile */}
       <div className="grid-kpi">
         {[
-          ['SALDO NETTO', fin.entrate>0?formatCurrency(fin.netto):'—', 'var(--ac)', fin.netto>=0?'↑ positivo':'↓ negativo'],
-          ['ORE LAVORATE', ore>0?`${ore}h`:'—', undefined, stimato?`≈ ${formatCurrency(stimato)}`:'imposta tariffa'],
-          ['PATRIMONIO', totaleRisparmi()>0?formatCurrency(totaleRisparmi()):'—', undefined, goals.length>0?`${goals.length} obiettivi`:'nessun obiettivo'],
-          ['REDDITO MEDIO', redditoMedio>0?formatCurrency(redditoMedio):'—', undefined, '/mese'],
+          ['LIQUIDITÀ', formatCurrency(liquidita), 'var(--ac)', `C: ${formatCurrency(saldi.bank)} | M: ${formatCurrency(saldi.cash)}`],
+          ['ORE LAVORATE', ore > 0 ? `${ore}h` : '—', undefined, stimato ? `≈ ${formatCurrency(stimato)}` : 'imposta tariffa'],
+          ['PATRIMONIO', formatCurrency(patrimonioTotale), 'var(--go)', `${risparmiAccantonati>0 ? '+ '+formatCurrency(risparmiAccantonati)+' risparmi' : 'nessun risparmio'}`],
+          ['REDDITO MEDIO', redditoMedio > 0 ? formatCurrency(redditoMedio) : '—', undefined, '/mese'],
         ].map(([l,v,c,s],i) => (
           <div key={l} className={`card card-${i+1}`}>
             <div className="label-xs" style={{ marginBottom:7 }}>{l}</div>

@@ -98,6 +98,25 @@ export function useFinanze() {
       .sort((a,b)=>b.value-a.value)
   }
 
+  const andamentoSaldoStorico = () => {
+    const now = new Date()
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+      // Fine del mese d
+      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
+      const ds = endOfMonth.toISOString().slice(0, 10)
+      
+      const saldoAlPunto = transazioni
+        .filter(t => t.data <= ds)
+        .reduce((acc, t) => acc + (t.tipo === 'entrata' ? t.importo : -t.importo), 0)
+      
+      return { 
+        mese: d.toLocaleDateString('it-IT', { month: 'short' }), 
+        saldo: Math.round(saldoAlPunto * 100) / 100 
+      }
+    })
+  }
+
   const andamentoMesi = () => {
     const now = new Date()
     return Array.from({ length:6 }, (_,i) => {
@@ -151,7 +170,7 @@ export function useFinanze() {
   return {
     transazioni, addTransazione, removeTransazione, updateTransazione,
     getSaldoDisponibile, getSaldoDettagliato, distribuisciSaldo,
-    forMonth, riepilogo, perCategoria, andamentoMesi,
+    forMonth, riepilogo, perCategoria, andamentoMesi, andamentoSaldoStorico,
     previste, addPrevista, removePrevista, updatePrevista, confirmPrevista, previsteDelMese, totalePrevisteMese,
   }
 }
