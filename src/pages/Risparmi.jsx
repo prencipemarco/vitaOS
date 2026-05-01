@@ -5,7 +5,7 @@ import { useFinanze } from '../hooks/useFinanze'
 import { useImpostazioni } from '../hooks/useImpostazioni'
 import { PageHeader, SectionHeader, FormPanel, InputRow, ProgressBar, Badge, EmptyState, showError, showConfirm, showSuccess, OnboardingModal } from '../components/ui'
 import { formatCurrency, todayStr } from '../utils/dateHelpers'
-import { mesiAlTraguardo, MAX_SAVINGS_RATIO } from '../utils/algoritmoRisparmi'
+import { allocaSurplus, mesiAlTraguardo, MAX_SAVINGS_RATIO } from '../utils/algoritmoRisparmi'
 
 const PRIO_C = { alta:'#A04545', media:'#C46A3C', bassa:'#3A7059' }
 const PRIO_L = { alta:'Alta', media:'Media', bassa:'Bassa' }
