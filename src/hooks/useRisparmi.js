@@ -18,16 +18,31 @@ export function useRisparmi() {
   const removeGoal = (id) => setGoals(prev => prev.filter(g => g.id !== id))
 
   const updateGoal = (id, patch) =>
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...patch } : g))
+    setGoals(prev => prev.map(g => {
+      if (g.id === id) {
+        // Se l'utente aggiorna manualmente la cifra 'corrente', resettiamo il flag del versamento mensile
+        const newPatch = { ...patch }
+        if (patch.corrente !== undefined && patch.ultimoVersamentoMese === undefined) {
+          newPatch.ultimoVersamentoMese = null
+        }
+        return { ...g, ...newPatch }
+      }
+      return g
+    }))
 
   const depositaLibero = (importo) =>
     setSalvadanaio(prev => Math.round((prev + importo) * 100) / 100)
 
   const distribuisciSurplus = (surplus) => {
     const allocati = allocaSurplus(surplus, goals)
+    const currentMonth = new Date().toISOString().slice(0, 7)
     setGoals(prev => prev.map(g => {
       const a = allocati.find(x => x.id === g.id)
-      return a ? { ...g, corrente: Math.round((g.corrente + a.allocato)*100)/100 } : g
+      return a ? { 
+        ...g, 
+        corrente: Math.round((g.corrente + a.allocato)*100)/100,
+        ultimoVersamentoMese: currentMonth 
+      } : g
     }))
     const used = allocati.reduce((s, g) => s + g.allocato, 0)
     const resto = surplus - used

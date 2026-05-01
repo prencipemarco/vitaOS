@@ -177,7 +177,11 @@ export default function Risparmi() {
   }
 
   const handleVersaSingolo = (goal, importo) => {
-    updateGoal(goal.id, { corrente: Math.round((goal.corrente + importo) * 100) / 100 })
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    updateGoal(goal.id, { 
+      corrente: Math.round((goal.corrente + importo) * 100) / 100,
+      ultimoVersamentoMese: currentMonth
+    })
     addTransazione({ 
       desc: `Risparmio per: ${goal.nome}`, 
       importo: importo, 
@@ -414,15 +418,18 @@ export default function Risparmi() {
                         }} />
                       <div style={{ flex:1 }} />
                       {showSuggestions && (() => {
+                        const currentMonth = new Date().toISOString().slice(0, 7)
+                        const isPaid = g.ultimoVersamentoMese === currentMonth
                         const suggestion = allocations.find(a => a.id === g.id)?.allocato || 0
                         if (suggestion <= 0) return null
                         return (
                           <button 
-                            className="btn-accent" 
-                            style={{ fontSize:10, padding:'4px 10px', height:'auto' }}
-                            onClick={() => handleVersaSingolo(g, suggestion)}
+                            className={isPaid ? "btn-ghost" : "btn-accent"} 
+                            style={{ fontSize:10, padding:'4px 10px', height:'auto', opacity: isPaid ? 0.6 : 1 }}
+                            onClick={() => !isPaid && handleVersaSingolo(g, suggestion)}
+                            disabled={isPaid}
                           >
-                            Versa quota: +{formatCurrency(suggestion)}
+                            {isPaid ? "✓ Quota versata" : `Versa quota: +${formatCurrency(suggestion)}`}
                           </button>
                         )
                       })()}
