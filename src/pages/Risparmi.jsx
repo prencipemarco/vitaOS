@@ -135,9 +135,12 @@ export default function Risparmi() {
   const [depositAmount, setDepositAmount] = useState('')
 
   // Distribute
-  const [distFormOpen, setDistFormOpen] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [distSurplus, setDistSurplus] = useState('')
-  const [lastAlloc, setLastAlloc] = useState(null)
+  const allocations = useMemo(() => {
+    const surplus = parseFloat(distSurplus) || Math.max(0, fin.netto)
+    return allocaSurplus(surplus, goals)
+  }, [distSurplus, fin.netto, goals])
 
   // Projection: based ONLY on salvadanaio libero current balance + monthly contributions
   const proiezione = useMemo(() =>
@@ -173,19 +176,16 @@ export default function Risparmi() {
     showSuccess(`+${formatCurrency(n)} nel salvadanaio.`)
   }
 
-  const handleDistribuisci = () => {
-    const n = parseFloat(distSurplus) || maxCons
-    if (n <= 0) return
-    if (n > saldoDisp) {
-      showError(`Saldo insufficiente.\nDisponibile: ${formatCurrency(saldoDisp)}\nRichiesto: ${formatCurrency(n)}`)
-      return
-    }
-    const alloc = distribuisciSurplus(n)
-    addTransazione({ desc:'Distribuzione obiettivi risparmio', importo:n, tipo:'uscita', cat:'Risparmio', data:todayStr() })
-    setLastAlloc(alloc)
-    setDistFormOpen(false)
-    setDistSurplus('')
-    showSuccess(`${formatCurrency(n)} distribuiti.`)
+  const handleVersaSingolo = (goal, importo) => {
+    updateGoal(goal.id, { corrente: Math.round((goal.corrente + importo) * 100) / 100 })
+    addTransazione({ 
+      desc: `Risparmio per: ${goal.nome}`, 
+      importo: importo, 
+      tipo: 'uscita', 
+      cat: 'Risparmio', 
+      data: todayStr() 
+    })
+    showSuccess(`Versati ${formatCurrency(importo)} per ${goal.nome}`)
   }
 
   const handleRemoveGoal = g =>
@@ -328,23 +328,29 @@ export default function Risparmi() {
           <div className="card card-5">
             <SectionHeader action={
               <div style={{ display:'flex', gap:6 }}>
-                <button className="btn-ghost btn-sm" onClick={() => setDistFormOpen(f=>!f)}>↗ distribuisci</button>
+                <button className={`btn-ghost btn-sm ${showSuggestions?'active-ac':''}`} onClick={() => setShowSuggestions(!showSuggestions)}>
+                  {showSuggestions ? '✕ nascondi suggerimenti' : '↗ distribuisci'}
+                </button>
                 <button className="btn-ghost btn-sm" onClick={() => setGoalFormOpen(f=>!f)}>+ obiettivo</button>
               </div>
             }>
               obiettivi vincolati — {goals.length}
             </SectionHeader>
 
-            <FormPanel open={distFormOpen}>
-              <div style={{ fontSize:12,color:'var(--t2)',padding:'8px 10px',background:'var(--sf2)',borderRadius:7,lineHeight:1.7 }}>
-                Distribuisce max il <strong>{Math.round(MAX_SAVINGS_RATIO*100)}%</strong> del surplus ({formatCurrency(maxCons)}). Il versamento viene registrato come spesa in Finanze.
+            <FormPanel open={showSuggestions}>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ fontSize:12,color:'var(--t2)',padding:'8px 10px',background:'var(--sf2)',borderRadius:7,lineHeight:1.7 }}>
+                  Il sistema calcola la quota ideale basandosi sul <strong>{Math.round(MAX_SAVINGS_RATIO*100)}%</strong> del tuo surplus attuale ({formatCurrency(maxCons)}). 
+                  Puoi modificare l'importo totale qui sotto per ricalcolare i suggerimenti.
+                </div>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:'var(--t3)', whiteSpace:'nowrap' }}>Calcola su:</span>
+                  <input className="input-field" type="number"
+                    placeholder={`Default: ${formatCurrency(maxCons)}`}
+                    value={distSurplus} onChange={e => setDistSurplus(e.target.value)} style={{ maxWidth:150 }} />
+                  <button className="btn-ghost btn-sm" onClick={() => setDistSurplus('')}>Reset</button>
+                </div>
               </div>
-              <InputRow>
-                <input className="input-field" type="number"
-                  placeholder={`Importo (consigliato: ${formatCurrency(maxCons)})`}
-                  value={distSurplus} onChange={e => setDistSurplus(e.target.value)} />
-                <button className="btn-accent" onClick={handleDistribuisci}>Distribuisci</button>
-              </InputRow>
             </FormPanel>
 
             <FormPanel open={goalFormOpen}>
@@ -373,14 +379,6 @@ export default function Risparmi() {
               </InputRow>
             </FormPanel>
 
-            {lastAlloc && (
-              <div style={{ padding:'8px 10px',background:'var(--ac-bg)',borderRadius:7,marginBottom:10,fontSize:12,animation:'slideDown .2s ease' }}>
-                <div style={{ fontWeight:600,color:'var(--ac)',marginBottom:3 }}>Distribuzione applicata</div>
-                {lastAlloc.map(g => g.allocato>0 && (
-                  <div key={g.id} style={{ color:'var(--t2)' }}>→ {g.nome}: <strong style={{ fontFamily:"'DM Mono',monospace" }}>+{formatCurrency(g.allocato)}</strong></div>
-                ))}
-              </div>
-            )}
 
             {goals.length === 0
               ? <EmptyState message="Nessun obiettivo. Creane uno per iniziare." />
@@ -414,7 +412,20 @@ export default function Risparmi() {
                             if (!isNaN(v)) { updateGoal(g.id, { corrente:v }); e.target.value=''; showSuccess('Importo aggiornato.') }
                           }
                         }} />
-                      <span style={{ fontSize:10,color:'var(--t3)',alignSelf:'center',whiteSpace:'nowrap' }}>↵ salva</span>
+                      <div style={{ flex:1 }} />
+                      {showSuggestions && (() => {
+                        const suggestion = allocations.find(a => a.id === g.id)?.allocato || 0
+                        if (suggestion <= 0) return null
+                        return (
+                          <button 
+                            className="btn-accent" 
+                            style={{ fontSize:10, padding:'4px 10px', height:'auto' }}
+                            onClick={() => handleVersaSingolo(g, suggestion)}
+                          >
+                            Versa quota: +{formatCurrency(suggestion)}
+                          </button>
+                        )
+                      })()}
                     </div>
                   </div>
                 )
