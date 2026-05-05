@@ -33,6 +33,15 @@ export function useRisparmi() {
   const depositaLibero = (importo) =>
     setSalvadanaio(prev => Math.round((prev + importo) * 100) / 100)
 
+  const prelevaLibero = (importo) =>
+    setSalvadanaio(prev => Math.max(0, Math.round((prev - importo) * 100) / 100))
+
+  const prelevaDaGoal = (id, importo) =>
+    setGoals(prev => prev.map(g => g.id === id ? { 
+      ...g, 
+      corrente: Math.max(0, Math.round((g.corrente - importo) * 100) / 100) 
+    } : g))
+
   const distribuisciSurplus = (surplus) => {
     const allocati = allocaSurplus(surplus, goals)
     const currentMonth = new Date().toISOString().slice(0, 7)
@@ -77,7 +86,7 @@ export function useRisparmi() {
   return {
     goals, salvadanaioLibero,
     addGoal, removeGoal, updateGoal,
-    depositaLibero, distribuisciSurplus,
+    depositaLibero, prelevaLibero, prelevaDaGoal, distribuisciSurplus,
     getProiezione, getMesiAlTraguardo, contributoNecessario, totaleRisparmi,
     MAX_SAVINGS_RATIO,
   }

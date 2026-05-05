@@ -111,7 +111,7 @@ const SCENARIOS = [
 export default function Risparmi() {
   const now = new Date()
   const { goals, salvadanaioLibero, addGoal, removeGoal, updateGoal,
-          depositaLibero, distribuisciSurplus, totaleRisparmi, contributoNecessario } = useRisparmi()
+          depositaLibero, prelevaLibero, prelevaDaGoal, distribuisciSurplus, totaleRisparmi, contributoNecessario } = useRisparmi()
   const { riepilogo, andamentoMesi, addTransazione, getSaldoDisponibile } = useFinanze()
   const { settings } = useImpostazioni()
 
@@ -134,6 +134,10 @@ export default function Risparmi() {
   const [depositFormOpen, setDepositFormOpen] = useState(false)
   const [depositAmount, setDepositAmount] = useState('')
 
+  // Withdraw Salvadanaio
+  const [withdrawSalvOpen, setWithdrawSalvOpen] = useState(false)
+  const [withdrawSalvAmount, setWithdrawSalvAmount] = useState('')
+
   // Distribute
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [distSurplus, setDistSurplus] = useState('')
@@ -141,6 +145,11 @@ export default function Risparmi() {
     const surplus = parseFloat(distSurplus) || Math.max(0, fin.netto)
     return allocaSurplus(surplus, goals)
   }, [distSurplus, fin.netto, goals])
+
+  // Withdraw Goal
+  const [withdrawGoalOpen, setWithdrawGoalOpen] = useState(false)
+  const [withdrawGoalId, setWithdrawGoalId] = useState('')
+  const [withdrawGoalAmount, setWithdrawGoalAmount] = useState('')
 
   // Projection: based ONLY on salvadanaio libero current balance + monthly contributions
   const proiezione = useMemo(() =>
@@ -176,6 +185,20 @@ export default function Risparmi() {
     showSuccess(`+${formatCurrency(n)} nel salvadanaio.`)
   }
 
+  const handleWithdrawSalv = () => {
+    const n = parseFloat(withdrawSalvAmount)
+    if (!n || n <= 0) return
+    if (n > salvadanaioLibero) {
+      showError(`Fondi insufficienti nel salvadanaio.\nDisponibile: ${formatCurrency(salvadanaioLibero)}`)
+      return
+    }
+    prelevaLibero(n)
+    addTransazione({ desc:'Prelievo da salvadanaio libero', importo:n, tipo:'entrata', cat:'Risparmio', data:todayStr() })
+    setWithdrawSalvAmount('')
+    setWithdrawSalvOpen(false)
+    showSuccess(`${formatCurrency(n)} riportati nel saldo.`)
+  }
+
   const handleVersaSingolo = (goal, importo) => {
     const currentMonth = new Date().toISOString().slice(0, 7)
     updateGoal(goal.id, { 
@@ -190,6 +213,24 @@ export default function Risparmi() {
       data: todayStr() 
     })
     showSuccess(`Versati ${formatCurrency(importo)} per ${goal.nome}`)
+  }
+
+  const handlePrelevaGoal = () => {
+    const n = parseFloat(withdrawGoalAmount)
+    const gid = parseInt(withdrawGoalId)
+    if (!n || n <= 0 || !gid) return
+    const g = goals.find(x => x.id === gid)
+    if (!g) return
+    if (n > g.corrente) {
+      showError(`Fondi insufficienti in ${g.nome}.\nDisponibile: ${formatCurrency(g.corrente)}`)
+      return
+    }
+    prelevaDaGoal(gid, n)
+    addTransazione({ desc:`Prelievo da: ${g.nome}`, importo:n, tipo:'entrata', cat:'Risparmio', data:todayStr() })
+    setWithdrawGoalAmount('')
+    setWithdrawGoalId('')
+    setWithdrawGoalOpen(false)
+    showSuccess(`${formatCurrency(n)} riportati nel saldo.`)
   }
 
   const handleRemoveGoal = g =>
@@ -332,6 +373,7 @@ export default function Risparmi() {
           <div className="card card-5">
             <SectionHeader action={
               <div style={{ display:'flex', gap:6 }}>
+                <button className={`btn-ghost btn-sm ${withdrawGoalOpen?'active-ac':''}`} onClick={() => setWithdrawGoalOpen(!withdrawGoalOpen)}>↙ preleva</button>
                 <button className={`btn-ghost btn-sm ${showSuggestions?'active-ac':''}`} onClick={() => setShowSuggestions(!showSuggestions)}>
                   {showSuggestions ? '✕ nascondi suggerimenti' : '↗ distribuisci'}
                 </button>
@@ -340,6 +382,23 @@ export default function Risparmi() {
             }>
               obiettivi vincolati — {goals.length}
             </SectionHeader>
+
+            <FormPanel open={withdrawGoalOpen}>
+              <div style={{ fontSize:12,color:'var(--t2)',padding:'8px 10px',background:'var(--sf2)',borderRadius:7,lineHeight:1.7, marginBottom:8 }}>
+                Sposta fondi da un obiettivo vincolato al tuo saldo principale. L'operazione viene registrata come <strong>Entrata</strong> in Finanze.
+              </div>
+              <InputRow>
+                <select className="input-field" value={withdrawGoalId} onChange={e => setWithdrawGoalId(e.target.value)}>
+                  <option value="">Seleziona obiettivo...</option>
+                  {goals.map(g => (
+                    <option key={g.id} value={g.id}>{g.nome} ({formatCurrency(g.corrente)})</option>
+                  ))}
+                </select>
+                <input className="input-field" type="number" placeholder="Importo €"
+                  value={withdrawGoalAmount} onChange={e => setWithdrawGoalAmount(e.target.value)} />
+                <button className="btn-accent" onClick={handlePrelevaGoal}>Preleva</button>
+              </InputRow>
+            </FormPanel>
 
             <FormPanel open={showSuggestions}>
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -455,7 +514,10 @@ export default function Risparmi() {
             </div>
 
             <SectionHeader action={
-              <button className="btn-ghost btn-sm" onClick={() => setDepositFormOpen(f=>!f)}>+ deposita</button>
+              <div style={{ display:'flex', gap:6 }}>
+                <button className="btn-ghost btn-sm" onClick={() => setWithdrawSalvOpen(f=>!f)}>↙ preleva</button>
+                <button className="btn-ghost btn-sm" onClick={() => setDepositFormOpen(f=>!f)}>+ deposita</button>
+              </div>
             }>
               deposito
             </SectionHeader>
@@ -469,6 +531,18 @@ export default function Risparmi() {
                   placeholder={`Max ${formatCurrency(saldoDisp)}`}
                   value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
                 <button className="btn-accent" onClick={handleDeposit}>Deposita</button>
+              </InputRow>
+            </FormPanel>
+
+            <FormPanel open={withdrawSalvOpen}>
+              <div style={{ fontSize:11,color:'var(--t2)',lineHeight:1.6,padding:'5px 8px',background:'var(--sf2)',borderRadius:6 }}>
+                Registrato come entrata (Risparmio) in Finanze.
+              </div>
+              <InputRow>
+                <input className="input-field" type="number"
+                  placeholder={`Max ${formatCurrency(salvadanaioLibero)}`}
+                  value={withdrawSalvAmount} onChange={e => setWithdrawSalvAmount(e.target.value)} />
+                <button className="btn-accent" onClick={handleWithdrawSalv}>Preleva</button>
               </InputRow>
             </FormPanel>
 
