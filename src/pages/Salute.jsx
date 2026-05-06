@@ -333,6 +333,7 @@ export default function Salute() {
     scheda, updateGiorno, addEsercizio, removeEsercizio, updateEsercizio, moveEsercizio,
     sessioni, getSessioneOggi, startSessione, completaSerie, completaSessione, deleteSessione,
     corse, addCorsa, removeCorsa, getStatsCorse,
+    pesate, addPesata, removePesata,
     getStatsGenerali, getProgressiEsercizio, getAllEserciziNomi,
   } = useSalute()
   const { settings, getScheduleStudio, getSchedulePalestra } = useImpostazioni()
@@ -347,6 +348,9 @@ export default function Salute() {
   // Running form
   const [corsaForm, setCorsaForm] = useState({data:new Date().toISOString().slice(0,10),distanza_km:'',durata_min:'',dislivello_m:'',note:''})
   const [corsaFormOpen, setCorsaFormOpen] = useState(false)
+
+  // Weight form
+  const [pesoForm, setPesoForm] = useState('')
 
   const now        = new Date()
   const todayDow   = now.getDay()
@@ -393,6 +397,7 @@ export default function Salute() {
     {id:'scheda',  label:'Scheda',   badge:null},
     {id:'corsa',   label:'Corsa',    badge:corse.length>0?corse.length:null},
     {id:'progressi',label:'Progressi',badge:null},
+    {id:'peso',    label:'Peso',     badge:null},
   ]
 
   return (
@@ -874,6 +879,78 @@ export default function Salute() {
                   </div>
                 ))
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB PESO ── */}
+      {tab==='peso'&&(
+        <div style={{animation:'fadeUp .24s ease'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:16}}>
+            
+            {/* Chart */}
+            <div className="card card-1" style={{height:400}}>
+              <SectionHeader>Andamento Peso Corporeo</SectionHeader>
+              {pesate.length > 0 ? (
+                <div style={{height:320,marginTop:20}}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={pesate} margin={{top:10,right:10,left:-20,bottom:0}}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bd)" />
+                      <XAxis dataKey="data" stroke="var(--t3)" fontSize={11} tickFormatter={formatShort} />
+                      <YAxis stroke="var(--t3)" fontSize={11} domain={['auto', 'auto']} tickFormatter={v=>v+'kg'} />
+                      <Tooltip contentStyle={{background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:8,fontSize:12}} labelStyle={{color:'var(--t3)'}} />
+                      <Line type="monotone" dataKey="peso_kg" stroke={RUN_COLOR} strokeWidth={3} dot={{r:4,fill:RUN_COLOR,stroke:'var(--bg)',strokeWidth:2}} activeDot={{r:6}} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <EmptyState message="Nessuna pesata registrata. Inizia oggi!" />
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div className="card card-2">
+                <div className="label-xs" style={{marginBottom:12}}>Registra Peso (Oggi)</div>
+                <div style={{display:'flex',gap:8}}>
+                  <input className="input-field" type="number" step="0.1" placeholder="Es. 70.5" 
+                    value={pesoForm} onChange={e=>setPesoForm(e.target.value)} 
+                    style={{flex:1,fontFamily:"'DM Mono',monospace"}} />
+                  <button className="btn-accent" onClick={()=>{
+                    if(!pesoForm) return; 
+                    addPesata(pesoForm); setPesoForm(''); showSuccess('Peso registrato!');
+                  }} style={{background:RUN_COLOR,borderColor:RUN_COLOR}}>Salva</button>
+                </div>
+                {pesate.length > 0 && (
+                  <div style={{marginTop:16}}>
+                    <div style={{fontSize:11,color:'var(--t3)',marginBottom:6}}>Ultima pesata</div>
+                    <div style={{fontSize:24,fontWeight:700,fontFamily:"'DM Mono',monospace",color:RUN_COLOR}}>
+                      {pesate[pesate.length-1].peso_kg} <span style={{fontSize:14,color:'var(--t2)'}}>kg</span>
+                    </div>
+                    <div style={{fontSize:11,color:'var(--t2)'}}>{formatShort(pesate[pesate.length-1].data)}</div>
+                  </div>
+                )}
+              </div>
+
+              {pesate.length > 0 && (
+                <div className="card card-3">
+                  <div className="label-xs" style={{marginBottom:10}}>Storico</div>
+                  <div style={{maxHeight:250,overflowY:'auto',display:'flex',flexDirection:'column',gap:5}}>
+                    {[...pesate].reverse().map(p => (
+                      <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',background:'var(--sf)',borderRadius:8,border:'1px solid var(--bd)'}}>
+                        <span style={{fontSize:11,color:'var(--t2)'}}>{formatShort(p.data)}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <span style={{fontSize:13,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{p.peso_kg}kg</span>
+                          <button onClick={()=>{
+                            showConfirm('Rimuovere questa pesata?', ()=>removePesata(p.id))
+                          }} style={{background:'none',border:'none',color:'var(--rd)',cursor:'pointer',fontSize:12,opacity:.7}}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

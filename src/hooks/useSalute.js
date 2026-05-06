@@ -44,6 +44,7 @@ export function useSalute() {
   const [scheda, setScheda]   = useLocalStorage('wl_salute_scheda', DEFAULT_SCHEDA)
   const [sessioni, setSessioni] = useLocalStorage('wl_salute_sessioni', [])
   const [corse, setCorse]     = useLocalStorage('wl_salute_corse', [])
+  const [pesate, setPesate]   = useLocalStorage('wl_salute_pesate', [])
 
   // ── Scheda ─────────────────────────────────────────────────
   const updateGiorno = (dow, patch) =>
@@ -147,6 +148,17 @@ export function useSalute() {
     return { totaleKm, totalMin, pctTerra: pctTerraCurrent, giriTerra, numCorse:ok.length, kmMese, bestPace, bestDist, paceList, distList, weeklyKm }
   }
 
+  // ── Peso Corporeo ──────────────────────────────────────────
+  const addPesata = (peso_kg) => {
+    const data = new Date().toISOString().slice(0, 10)
+    setPesate(prev => {
+      // Se esiste già una pesata per oggi, la sovrascriviamo
+      const clean = prev.filter(p => p.data !== data)
+      return [...clean, { id: `peso_${Date.now()}`, data, peso_kg: parseFloat(peso_kg) }].sort((a,b) => a.data.localeCompare(b.data))
+    })
+  }
+  const removePesata = (id) => setPesate(prev => prev.filter(p => p.id !== id))
+
   // ── Stats palestra ─────────────────────────────────────────
   const getStatsGenerali = () => {
     const completate = sessioni.filter(s=>s.completata)
@@ -182,6 +194,7 @@ export function useSalute() {
     scheda, updateGiorno, addEsercizio, removeEsercizio, updateEsercizio, moveEsercizio,
     sessioni, getSessioneOggi, startSessione, completaSerie, completaSessione, deleteSessione,
     corse, addCorsa, removeCorsa, getStatsCorse,
+    pesate, addPesata, removePesata,
     getStatsGenerali, getProgressiEsercizio, getAllEserciziNomi,
   }
 }
