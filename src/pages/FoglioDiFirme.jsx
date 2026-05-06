@@ -47,13 +47,15 @@ export default function FoglioDiFirme() {
   const pct = target > 0 ? Math.min(100, Math.round(ore/target*100)) : 0
 
   const chartData = (() => {
-    const weeks = {}
+    const days = {}
     monthFirme.forEach(f => {
       const d = new Date(f.data+'T12:00')
-      const w = `Sett.${Math.ceil(d.getDate()/7)}`
-      weeks[w] = (weeks[w]||0) + calcOre(f)
+      const dayStr = String(d.getDate()).padStart(2, '0')
+      days[dayStr] = (days[dayStr]||0) + calcOre(f)
     })
-    return Object.entries(weeks).map(([name,ore]) => ({ name, ore: Math.round(ore*10)/10 }))
+    return Object.entries(days)
+      .map(([name,ore]) => ({ name, ore: Math.round(ore*10)/10 }))
+      .sort((a,b) => a.name.localeCompare(b.name))
   })()
 
   const previewOre = (() => {
@@ -127,7 +129,7 @@ export default function FoglioDiFirme() {
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           {chartData.length > 0 && (
             <div className="card">
-              <div className="label-xs" style={{ marginBottom:12 }}>ore per settimana</div>
+              <div className="label-xs" style={{ marginBottom:12 }}>ore giornaliere</div>
               <ResponsiveContainer width="100%" height={130}>
                 <BarChart data={chartData} margin={{ top:4,right:4,bottom:0,left:0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--bd)" vertical={false} />
